@@ -1,0 +1,45 @@
+# Reusable CI for a Node/TypeScript project.
+# Copy to <project>/.github/workflows/ci.yml
+#
+# This is the gate that makes "verified" mean something beyond an eyeballed diff.
+# Pair it with branch protection on main requiring this workflow to pass, so the
+# house rule (main is only reached by merging something verified) is enforced by
+# the platform rather than by discipline.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      # Ordered cheapest-first so a failure costs the least time.
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build --if-present
