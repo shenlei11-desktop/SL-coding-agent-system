@@ -57,6 +57,13 @@ It is reading an instruction file meant for something else. opencode ingests
 say — the delegate is usually obeying, not misbehaving. `npm run doctor` checks the
 global file for orchestration protocol leaking through.
 
+**A `--seed` file reports "File not found" against a warm server.**
+Fixed 2026-08-22: `-f` paths are now resolved to absolute before being passed to
+opencode. Previously a relative seed path resolved against the *server's* launch
+directory, not the target repo's `--dir` — silent-failed the instant the warm server
+(reused across projects, by design) was started from anywhere else. If this recurs on
+an older checkout, update `bin/delegate.mjs`.
+
 **Orphaned processes after a timeout.**
 Windows does not kill a child's descendants with the parent. The dispatcher uses
 `taskkill /T` on timeout, but if one escapes:

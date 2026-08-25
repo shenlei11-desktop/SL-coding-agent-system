@@ -291,9 +291,15 @@ if (!args['no-attach'] && existsSync(SERVER_FILE)) {
 }
 
 // Seed files as real attachments as well as naming them in the prompt.
+//
+// MUST be absolute. Verified in practice: when --attach hits a warm server, -f is
+// resolved against the SERVER's launch directory, not this process's --dir. A relative
+// path silently fails ("File not found") whenever the server was started from a
+// different repo than the one being targeted — which is the normal case, since one
+// warm server is meant to be reused across projects.
 for (const f of (args.seed ? String(args.seed).split(',') : [])) {
   const t = f.trim();
-  if (t) runArgs.push('-f', t);
+  if (t) runArgs.push('-f', path.resolve(cwd, t));
 }
 
 if (args['dry-run']) {
