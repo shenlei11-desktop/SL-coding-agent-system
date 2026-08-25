@@ -1,0 +1,69 @@
+{
+  "_comment": [
+    "Tier registry. Source of truth for model routing and rotation.",
+    "'rotation' is the pool the dispatcher actually cycles through for a tier.",
+    "'unverified' models exist in the catalog but have no benchmark grounding for",
+    "agentic coding; they are excluded from rotation unless --include-unverified is",
+    "passed. This keeps guessed placements from silently doing real work.",
+    "Benchmark figures are SWE-bench (Pro / Verified) as of 2026-08, directional only."
+  ],
+
+  "provider": "opencode-go",
+
+  "tiers": {
+    "1": {
+      "agent": "t1-scribe",
+      "use": "Docs, comments, copy, formatting, boilerplate. No logic changes.",
+      "rotation": [
+        { "model": "kimi-k2.6",         "swebench": "58.6 / 80.2", "confidence": "benchmarked", "note": "Tier-2 calibre; strongest cheap option." },
+        { "model": "deepseek-v4-flash", "swebench": null,          "confidence": "inferred",    "note": "Named as a flash/fast variant." },
+        { "model": "glm-5.1",           "swebench": null,          "confidence": "inferred",    "note": "Older generation of the benchmarked glm-5.2." }
+      ],
+      "unverified": ["hy3", "mimo-v2.5"]
+    },
+
+    "2": {
+      "agent": "t2-build",
+      "use": "Typical fixes and small features. 1-3 files, no architectural decisions.",
+      "rotation": [
+        { "model": "kimi-k2.7-code", "swebench": null,       "confidence": "inferred",    "note": "Code-specialised variant of benchmarked kimi-k2.6." },
+        { "model": "glm-5.2",        "swebench": "62.1 Pro", "confidence": "benchmarked", "note": "Briefly led open-weights on SWE-bench Pro. Arguably tier 3." },
+        { "model": "qwen3.7-plus",   "swebench": null,       "confidence": "inferred",    "note": "Same family as benchmarked qwen3.7-max." },
+        { "model": "qwen3.6-plus",   "swebench": null,       "confidence": "inferred",    "note": "Older generation of qwen3.7-plus." }
+      ],
+      "unverified": ["deepseek-v4-pro", "glm-5.3", "mimo-v2.5-pro", "minimax-m2.7"]
+    },
+
+    "3": {
+      "agent": "t3-architect",
+      "use": "Multi-file refactors, security/financial logic, or tasks tier 2 already failed.",
+      "rotation": [
+        { "model": "qwen3.8-max", "swebench": "67.7 Pro",   "confidence": "benchmarked", "note": "Strongest verified option available." },
+        { "model": "grok-4.5",    "swebench": "64.7 Pro",   "confidence": "benchmarked", "note": null },
+        { "model": "qwen3.7-max", "swebench": "60.6 / 80.4", "confidence": "benchmarked", "note": null },
+        { "model": "minimax-m3",  "swebench": "59.0 / 80.5", "confidence": "benchmarked", "note": null }
+      ],
+      "unverified": ["kimi-k3", "gpt-5.6-luna"]
+    }
+  },
+
+  "roles": {
+    "reviewer": {
+      "agent": "reviewer",
+      "use": "Read-only second-model review of a completed diff.",
+      "rotation": [
+        { "model": "glm-5.2",     "confidence": "benchmarked" },
+        { "model": "qwen3.7-max", "confidence": "benchmarked" }
+      ],
+      "_note": "The dispatcher never picks a reviewer model equal to the implementer's model — a fresh prior is the entire point of this role."
+    },
+    "oneshot": {
+      "agent": "oneshot",
+      "use": "Pure text transformation, no tool loop.",
+      "rotation": [
+        { "model": "hy3",               "confidence": "inferred" },
+        { "model": "deepseek-v4-flash", "confidence": "inferred" }
+      ]
+    }
+  }
+}

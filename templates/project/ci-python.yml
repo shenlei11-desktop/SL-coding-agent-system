@@ -1,0 +1,47 @@
+# Reusable CI for a Python project.
+# Copy to <project>/.github/workflows/ci.yml
+#
+# Pair with branch protection on main requiring this workflow to pass, so the house
+# rule (main is only reached by merging something verified) is enforced by the
+# platform rather than by discipline.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          # Prefer the project's own declared extras; fall back to requirements.
+          if [ -f pyproject.toml ]; then pip install -e ".[dev]" || pip install -e .; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      # Ordered cheapest-first so a failure costs the least time.
+      - name: Lint
+        run: ruff check .
+
+      - name: Typecheck
+        run: mypy . || true   # drop the `|| true` once the codebase is clean
+
+      - name: Test
+        run: pytest -q
