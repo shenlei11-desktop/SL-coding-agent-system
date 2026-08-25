@@ -38,6 +38,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline';
+import { resolveOpencodeBin } from './lib/resolve-opencode.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
@@ -45,8 +46,7 @@ const REPO = path.resolve(HERE, '..');
 // Spawn the native binary, not the .cmd shim. Two reasons: Node >=20 refuses to
 // spawn .cmd without shell:true (and shell:true would mangle a multi-line prompt
 // argument), and it drops a cmd.exe process layer from every call.
-const OPENCODE = process.env.OPENCODE_BIN
-  || 'C:\\Users\\USER\\AppData\\Roaming\\npm\\node_modules\\opencode-ai\\bin\\opencode.exe';
+const OPENCODE = resolveOpencodeBin();
 
 // Deliberately NOT under ~/.claude — opencode reads instruction files from there.
 const STATE_DIR = process.env.AGENT_STATE_DIR || path.join(homedir(), '.agent-system', 'state');
