@@ -11,6 +11,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 
 let cached;
@@ -26,10 +27,11 @@ export function resolveOpencodeBin() {
     if (existsSync(exe)) return (cached = exe);
   } catch { /* npm not on PATH, or the package isn't installed globally — fall through */ }
 
-  // Last resort: this machine's known location, kept only so a broken `npm root -g`
-  // doesn't leave every command with no default at all.
+  // Last resort: the per-user npm global location on Windows, or the generic npm shim
+  // name elsewhere. Avoid a hardcoded USER placeholder, which breaks on any other account.
   const fallback = process.platform === 'win32'
-    ? 'C:\\Users\\USER\\AppData\\Roaming\\npm\\node_modules\\opencode-ai\\bin\\opencode.exe'
+    ? path.join(process.env.APPDATA || path.join(homedir(), 'AppData', 'Roaming'),
+      'npm', 'node_modules', 'opencode-ai', 'bin', 'opencode.exe')
     : 'opencode';
   return (cached = fallback);
 }
