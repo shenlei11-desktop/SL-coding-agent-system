@@ -14,6 +14,12 @@ next task starts on a clean context — the loop keeps no state between tasks, a
 exploration left in the window gets re-read on every subsequent turn. The skills in
 `~/.claude/skills/` carry the detail; this file covers the operational edges.
 
+`classify` now ends by stating a **dispatch spec** (approach · scope · acceptance check ·
+anti-pattern) and, for anything past a trivial fix, waiting for a one-line yes before
+spending an opencode run on it. `verify` runs `scripts/verify.mjs` — scope, a
+test-tampering scan, then the repo's own typecheck/lint/test — as an ordered gate that
+stops at the first hard failure, so "green" is mechanical rather than remembered.
+
 Write the request itself in the four-field shape from `REQUEST-BRIEF.md` — it is what lets
 the orchestrator skip its own exploration and go straight to a dispatch.
 

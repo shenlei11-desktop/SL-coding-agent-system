@@ -117,7 +117,9 @@ first — see the `classify` skill.
 ## Useful commands
 
 - `npm run delegate` — dispatch a task to the delegate
+- `npm run verify` — run the landing gate (scope, test-tampering, typecheck, lint, tests) on a repo
 - `npm run ledger` — view session cost ledger
+- `npm test` — the system's own unit tests
 - `npm run serve:stop` / `npm run serve:status` — manage the delegate server
 - `npm run install:dry` — preview what the installer would change
 
