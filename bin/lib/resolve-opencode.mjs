@@ -21,7 +21,10 @@ export function resolveOpencodeBin() {
   if (process.env.OPENCODE_BIN) return (cached = process.env.OPENCODE_BIN);
 
   try {
-    const globalRoot = execFileSync('npm', ['root', '-g'], { encoding: 'utf8' }).trim();
+    const globalRoot = execFileSync('npm', ['root', '-g'], {
+      encoding: 'utf8',
+      shell: process.platform === 'win32',
+    }).trim();
     const exe = path.join(globalRoot, 'opencode-ai', 'bin',
       process.platform === 'win32' ? 'opencode.exe' : 'opencode');
     if (existsSync(exe)) return (cached = exe);
