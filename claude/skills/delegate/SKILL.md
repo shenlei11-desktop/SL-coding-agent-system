@@ -29,6 +29,28 @@ context** — it duplicates whole file contents per tool call and will flood the
 The log path is in the result if a failure genuinely needs investigating; grep it for a
 specific field rather than reading it.
 
+## The dispatch is standardised per repo
+
+A target repo may carry `.agent-system.json` at its root setting the defaults for that
+repo — `tier`, `model`, `scope`, `seed`, `template`, and a baseline `anti` list. When it
+exists you pass only `--task` (plus a task-specific `--scope`/`--anti` if this task is
+narrower than the repo default). CLI flags override the file; `--anti` adds to its
+baseline rather than replacing it; `--no-config` ignores it. `--dry-run` shows the
+resolved values and which config file applied. Seed a new repo from
+`templates/project/agent-system.json`.
+
+## Reading the result
+
+- `touched` — paths the run actually edited, **including files that were already dirty**
+  when it started. `changed` only lists newly-dirty paths, so on an uncommitted tree it
+  can be empty while real work happened. Judge "did it do anything" by `touched`.
+- `out_of_scope` / `reverted` / `strays_kept` — files changed outside `--scope`. Tracked
+  strays are reverted automatically; `strays_kept` lists untracked ones still on disk for
+  you to remove. Pass `--keep-strays` only when you want to inspect them first.
+- An overlapping dispatch in the same working directory is refused up front (`error:
+  "a dispatch with an overlapping scope is already active"`). Run one task at a time per
+  repo, or give the parallel runs genuinely disjoint `--scope`s.
+
 ## Getting latency down
 
 Latency is the main complaint about this loop, and most of it is avoidable. In order of
@@ -64,8 +86,10 @@ first — usually to `--template skeleton` — before escalating the tier.
 The dispatcher enforces scope and reports what changed. It does **not** tell you the code
 is correct. Complete the loop:
 
-1. **Check the result JSON.** `ok: false` means it failed, timed out, or went out of
-   scope. `out_of_scope` lists strays — re-run with `--revert-strays` or revert manually.
+1. **Check the result JSON.** `ok: false` means it failed, timed out, or left an
+   untracked stray (`strays_kept`). Tracked out-of-scope edits are already reverted;
+   delete anything in `strays_kept` yourself. `touched: []` on an `ok` run means it
+   wrote nothing — treat that as a red flag, not a pass.
 2. **Read the diff.** `git diff --stat` first; the full diff only for the files that
    matter. This is the step that catches silent partial completion.
 3. **Run the tests.** House rule: a change is not done until tests pass. This is the real
@@ -82,7 +106,10 @@ Do not re-run the same prompt. Diagnose which failure it is:
   `--anti` naming exactly what it did wrong. Do not just escalate the tier.
 - **Right approach, buggy** → tighten the task's acceptance criteria and re-dispatch at
   the same tier, seeding the files it got wrong.
-- **Out of scope** → tighten `--scope`; add `--revert-strays`.
+- **Out of scope** → tighten `--scope`. Tracked strays self-revert; if the same file
+  keeps getting hit, name it in `--anti`.
+- **Overlap refused** → another dispatch is live in that repo. One task per repo at a
+  time, or give the parallel runs disjoint `--scope`s.
 - **Timed out** → the task is too big. Split it.
 - **Incomplete but honestly reported** → dispatch the remainder as a follow-up with
   `--session` so it keeps its context.

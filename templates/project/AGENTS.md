@@ -20,7 +20,9 @@ Keep this file short. A long instruction file is skimmed; a short one is followe
 
 ## Commands
 
-The real ones — an agent will run these, so wrong commands cost a full round-trip.
+The real ones — an agent will run these, so wrong commands cost a full round-trip. The
+`test` / `lint` / `typecheck` scripts here are also exactly what `verify.mjs` runs as the
+landing gate, so wire them up as package scripts (or standard `pytest`/`ruff`/`mypy`).
 
 ```bash
 <install>      # e.g. npm ci  /  pip install -e ".[dev]"
@@ -61,10 +63,23 @@ for a generic pattern over the project's specific one.
 | <client> | `src/clients/<example>` |
 | <test> | `tests/<example>` |
 
+## Output conventions
+
+Fill in only the ones this project actually produces; delete the rest.
+
+- **UI / visual.** The global instruction file already bars the generative-design
+  defaults (cream-and-serif + terracotta, near-black + one acid accent, decorative
+  numbered markers). Name this project's design system, tokens, or the component file to
+  copy, so "restrained" resolves to something concrete.
+- **Structured documents / data files.** State the exact schema — columns, field order,
+  allowed values. Identifiers referenced from another file must be verified present there,
+  never invented or guessed. Say when to quote a source verbatim vs. paraphrase.
+
 ## Hard rules
 
 - Do not commit, push, or delete files.
 - Do not add a dependency without being asked.
 - Do not modify lockfiles, notebook metadata, or CI config unless the task names them.
-- Do not weaken or delete a test to make a suite pass.
+- Do not weaken, skip, or delete a test to make a suite pass — `verify.mjs` scans the
+  diff for this and for edits outside the task's scope.
 - Change only the files the task names.

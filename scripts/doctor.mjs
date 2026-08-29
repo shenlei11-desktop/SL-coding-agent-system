@@ -11,14 +11,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveOpencodeBin } from '../bin/lib/resolve-opencode.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
 const HOME = homedir();
 const STATE_DIR = process.env.AGENT_STATE_DIR || path.join(HOME, '.agent-system', 'state');
 
-const OPENCODE = process.env.OPENCODE_BIN
-  || 'C:\\Users\\USER\\AppData\\Roaming\\npm\\node_modules\\opencode-ai\\bin\\opencode.exe';
+const OPENCODE = resolveOpencodeBin();
 
 let failures = 0;
 let warnings = 0;

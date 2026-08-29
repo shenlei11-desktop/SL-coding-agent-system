@@ -9,8 +9,41 @@ npm run serve:start     # once per working session — removes process boot from
 npm run doctor          # after any config change, or when a run behaves oddly
 ```
 
-Then, per task: `classify` → dispatch → verify. The skills in `~/.claude/skills/` carry
-the detail; this file covers the operational edges.
+Then, per task: `classify` → dispatch → verify, then `/clear` once the branch lands so the
+next task starts on a clean context — the loop keeps no state between tasks, and stale
+exploration left in the window gets re-read on every subsequent turn. The skills in
+`~/.claude/skills/` carry the detail; this file covers the operational edges.
+
+`classify` now ends by stating a **dispatch spec** (approach · scope · acceptance check ·
+anti-pattern) and, for anything past a trivial fix, waiting for a one-line yes before
+spending an opencode run on it. `verify` runs `scripts/verify.mjs` — scope, a
+test-tampering scan, then the repo's own typecheck/lint/test — as an ordered gate that
+stops at the first hard failure, so "green" is mechanical rather than remembered.
+
+Write the request itself in the four-field shape from `REQUEST-BRIEF.md` — it is what lets
+the orchestrator skip its own exploration and go straight to a dispatch.
+
+## Per-repo standardisation
+
+First time in a repo: from inside it, launch `claude` and ask it to *set the repo up for
+the agent system, following `ONBOARD-REPO.md`*. `docs/ONBOARD-REPO.md` is the procedure —
+branch, draft `AGENTS.md` (read by opencode) and `.agent-system.json` (read by the
+dispatcher) from the repo's own contents, sanity-check, commit just those.
+
+`.agent-system.json` at the repo root fixes that repo's routing once — `tier`, `model`,
+`scope`, `seed`, `template`, and a baseline `anti` list. After that a dispatch into it is
+just `--task`, and it behaves the same on every machine. CLI flags override the file,
+`--anti` adds to its baseline, `--no-config` ignores it, `--dry-run` shows what resolved.
+
+Scope enforcement is on by default now: tracked files edited outside `--scope` are
+reverted (`strays_kept` in the result lists untracked ones for you to delete;
+`--keep-strays` turns the revert off). A dispatch whose scope overlaps one already
+running in the same working directory is refused rather than allowed to race the tree —
+run one task per repo at a time, or give concurrent runs disjoint scopes.
+
+Judge a run by `touched`, not `changed`: `changed` misses files that were already dirty
+when the run started, so on an uncommitted tree it can read as "did nothing" when the
+delegate rewrote a whole file. Committing between dispatches keeps that signal honest.
 
 ## Latency, in order of payoff
 

@@ -73,3 +73,22 @@ Write it, then optionally delegate a `--role reviewer` pass for a second opinion
 
 Route B is the one that gets skipped under time pressure and the one that pays for itself
 most. If you can name the wrong pattern in advance, you are in Route B — take it.
+
+## State the spec before you send it
+
+The expensive failure — a confident build of the wrong thing — is cheapest to catch
+*here*, in one line, before opencode is invoked. Before dispatching, write the **dispatch
+spec**:
+
+- **Approach** — one sentence: what you're having it do and why this shape, not the
+  obvious alternative.
+- **Scope** — the exact `--scope` paths.
+- **Done** — the acceptance check. A test name, a command whose output changes, an
+  observable behaviour. Not "it works".
+- **Anti** — the pattern it must not reach for (Route B: always; Route A: if one exists).
+
+For anything past a trivial Route A (docs, a one-line fix, boilerplate that mirrors a
+neighbour), put the spec in front of the user and **wait for a one-line yes or a
+correction** before dispatching. A rejected approach costs a sentence; a rejected diff
+costs a full round-trip and shows up in the ledger. This is also the `touched`/`changed`
+discipline: commit or note the prior state first so the run's output is legible.

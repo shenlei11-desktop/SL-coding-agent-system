@@ -13,9 +13,9 @@ import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { resolveOpencodeBin } from './lib/resolve-opencode.mjs';
 
-const OPENCODE = process.env.OPENCODE_BIN
-  || 'C:\\Users\\USER\\AppData\\Roaming\\npm\\node_modules\\opencode-ai\\bin\\opencode.exe';
+const OPENCODE = resolveOpencodeBin();
 
 const STATE_DIR = process.env.AGENT_STATE_DIR || path.join(homedir(), '.agent-system', 'state');
 const SERVER_FILE = path.join(STATE_DIR, 'server.json');

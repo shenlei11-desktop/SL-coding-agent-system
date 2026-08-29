@@ -8,6 +8,10 @@
  * tier table was guessed in the first place.
  *
  *   node scripts/ledger.mjs [--last N] [--by-model] [--failures]
+ *
+ * "files" is the count of paths the run actually edited — `touched` (which includes
+ * files that were already dirty when the run started) when present, else `changed`.
+ * A row that is `ok` with 0 files did real analysis but wrote nothing, or hit a bug.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -47,23 +51,26 @@ if (args.includes('--by-model')) {
   const by = new Map();
   for (const r of rows) {
     const k = r.model || 'unknown';
-    const e = by.get(k) || { runs: 0, ok: 0, cost: 0, wall: 0, strays: 0 };
+    const e = by.get(k) || { runs: 0, ok: 0, cost: 0, wall: 0, strays: 0, noWrite: 0 };
     e.runs++; if (r.ok) e.ok++;
     e.cost += r.cost || 0; e.wall += r.wall_s || 0;
     e.strays += (r.out_of_scope || []).length;
+    if (r.ok && !(r.touched || r.changed || []).length) e.noWrite++;
     by.set(k, e);
   }
-  console.log('\n  model                          runs   pass%   avg s   avg $     strays');
-  console.log('  ' + '-'.repeat(72));
+  console.log('\n  model                          runs   pass%   avg s   avg $   strays  ok/0files');
+  console.log('  ' + '-'.repeat(78));
   const sorted = [...by.entries()].sort((a, b) => b[1].runs - a[1].runs);
   for (const [m, e] of sorted) {
     const pass = ((e.ok / e.runs) * 100).toFixed(0).padStart(4);
     const avgS = (e.wall / e.runs).toFixed(1).padStart(6);
     const avgC = (e.cost / e.runs).toFixed(4).padStart(7);
-    console.log(`  ${m.padEnd(30)} ${String(e.runs).padStart(4)}   ${pass}%  ${avgS}  ${avgC}  ${String(e.strays).padStart(6)}`);
+    console.log(`  ${m.padEnd(30)} ${String(e.runs).padStart(4)}   ${pass}%  ${avgS}  ${avgC}  ${String(e.strays).padStart(6)}  ${String(e.noWrite).padStart(6)}`);
   }
   console.log('\n  Pass% counts scope violations and errors, not code correctness —');
-  console.log('  a run can pass here and still be wrong. Judge tiers on both.\n');
+  console.log('  a run can pass here and still be wrong. Judge tiers on both.');
+  console.log('  ok/0files = passed but wrote nothing; a high count means misrouted or');
+  console.log('  under-specified tasks, not a bad model.\n');
   process.exit(0);
 }
 
@@ -77,9 +84,10 @@ console.log('  ' + '-'.repeat(78));
 for (const r of recent) {
   const when = (r.ts || '').slice(5, 16).replace('T', ' ');
   const flag = r.ok ? ' ok ' : 'FAIL';
+  const files = (r.touched || r.changed || []).length;
   console.log(
     `  ${when.padEnd(20)} ${flag}  ${String(r.model || '').padEnd(28)} `
-    + `${String(r.wall_s ?? '').padStart(5)}  ${(r.cost ?? 0).toFixed(4)}  ${(r.changed || []).length}`,
+    + `${String(r.wall_s ?? '').padStart(5)}  ${(r.cost ?? 0).toFixed(4)}  ${files}`,
   );
 }
 console.log();

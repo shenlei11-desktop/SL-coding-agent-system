@@ -26,7 +26,7 @@
       "agent": "t2-build",
       "use": "Typical fixes and small features. 1-3 files, no architectural decisions.",
       "rotation": [
-        { "model": "kimi-k2.7-code", "swebench": null,       "confidence": "inferred",    "note": "Code-specialised variant of benchmarked kimi-k2.6." },
+        { "model": "kimi-k2.7-code", "swebench": null,       "confidence": "inferred",    "note": "Code-specialised variant of benchmarked kimi-k2.6. Ledger 2026-08: 9 scope strays / 5 runs on a docs-heavy repo — auto-revert covers it, but re-check `ledger --by-model` before trusting it with wide --scope globs." },
         { "model": "glm-5.2",        "swebench": "62.1 Pro", "confidence": "benchmarked", "note": "Briefly led open-weights on SWE-bench Pro. Arguably tier 3." },
         { "model": "qwen3.7-plus",   "swebench": null,       "confidence": "inferred",    "note": "Same family as benchmarked qwen3.7-max." },
         { "model": "qwen3.6-plus",   "swebench": null,       "confidence": "inferred",    "note": "Older generation of qwen3.7-plus." }
@@ -39,7 +39,7 @@
       "use": "Multi-file refactors, security/financial logic, or tasks tier 2 already failed.",
       "rotation": [
         { "model": "qwen3.8-max", "swebench": "67.7 Pro",   "confidence": "benchmarked", "note": "Strongest verified option available." },
-        { "model": "grok-4.5",    "swebench": "64.7 Pro",   "confidence": "benchmarked", "note": null },
+        { "model": "grok-4.6",    "swebench": null,         "confidence": "inferred",    "note": "Direct successor to benchmarked grok-4.5 (was 64.7 Pro); no separate benchmark yet." },
         { "model": "qwen3.7-max", "swebench": "60.6 / 80.4", "confidence": "benchmarked", "note": null },
         { "model": "minimax-m3",  "swebench": "59.0 / 80.5", "confidence": "benchmarked", "note": null }
       ],
