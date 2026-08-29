@@ -39,7 +39,7 @@
       "use": "Multi-file refactors, security/financial logic, or tasks tier 2 already failed.",
       "rotation": [
         { "model": "qwen3.8-max", "swebench": "67.7 Pro",   "confidence": "benchmarked", "note": "Strongest verified option available." },
-        { "model": "grok-4.5",    "swebench": "64.7 Pro",   "confidence": "benchmarked", "note": null },
+        { "model": "grok-4.6",    "swebench": null,         "confidence": "inferred",    "note": "Direct successor to benchmarked grok-4.5 (was 64.7 Pro); no separate benchmark yet." },
         { "model": "qwen3.7-max", "swebench": "60.6 / 80.4", "confidence": "benchmarked", "note": null },
         { "model": "minimax-m3",  "swebench": "59.0 / 80.5", "confidence": "benchmarked", "note": null }
       ],
