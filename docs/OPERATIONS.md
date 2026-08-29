@@ -9,8 +9,31 @@ npm run serve:start     # once per working session — removes process boot from
 npm run doctor          # after any config change, or when a run behaves oddly
 ```
 
-Then, per task: `classify` → dispatch → verify. The skills in `~/.claude/skills/` carry
-the detail; this file covers the operational edges.
+Then, per task: `classify` → dispatch → verify, then `/clear` once the branch lands so the
+next task starts on a clean context — the loop keeps no state between tasks, and stale
+exploration left in the window gets re-read on every subsequent turn. The skills in
+`~/.claude/skills/` carry the detail; this file covers the operational edges.
+
+Write the request itself in the four-field shape from `REQUEST-BRIEF.md` — it is what lets
+the orchestrator skip its own exploration and go straight to a dispatch.
+
+## Per-repo standardisation
+
+Drop `.agent-system.json` at a target repo's root (seed it from
+`templates/project/agent-system.json`) to fix that repo's routing once — `tier`, `model`,
+`scope`, `seed`, `template`, and a baseline `anti` list. After that a dispatch into it is
+just `--task`, and it behaves the same on every machine. CLI flags override the file,
+`--anti` adds to its baseline, `--no-config` ignores it, `--dry-run` shows what resolved.
+
+Scope enforcement is on by default now: tracked files edited outside `--scope` are
+reverted (`strays_kept` in the result lists untracked ones for you to delete;
+`--keep-strays` turns the revert off). A dispatch whose scope overlaps one already
+running in the same working directory is refused rather than allowed to race the tree —
+run one task per repo at a time, or give concurrent runs disjoint scopes.
+
+Judge a run by `touched`, not `changed`: `changed` misses files that were already dirty
+when the run started, so on an uncommitted tree it can read as "did nothing" when the
+delegate rewrote a whole file. Committing between dispatches keeps that signal honest.
 
 ## Latency, in order of payoff
 

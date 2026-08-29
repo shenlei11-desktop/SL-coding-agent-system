@@ -13,6 +13,7 @@
     "serve:status": "node bin/serve.mjs status",
     "delegate": "node bin/delegate.mjs",
     "doctor": "node scripts/doctor.mjs",
-    "ledger": "node scripts/ledger.mjs"
+    "ledger": "node scripts/ledger.mjs",
+    "test": "node --test tests/"
   }
 }

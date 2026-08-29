@@ -24,21 +24,30 @@
  *     delegate. Rotation state deliberately lives under ~/.agent-system/ instead.
  *
  *  4. SCOPE ENFORCEMENT. Declared --scope globs are diffed against git's actual
- *     porcelain output after the run. Strays are reported, and with --revert-strays,
- *     reverted. This catches the class of bug where a run silently edits unrelated
- *     notebook metadata.
+ *     porcelain output after the run. Strays are reverted by default (--keep-strays
+ *     to opt out); untracked strays are reported, never deleted. This catches the
+ *     class of bug where a run silently edits unrelated notebook metadata.
+ *
+ *  5. CROSS-REPO STANDARDISATION. Routing that should be the same every time a repo
+ *     is targeted lives in that repo's .agent-system.json (tier, model, scope,
+ *     baseline anti-patterns, ...). CLI flags override it; --no-config ignores it.
+ *     Two dispatches whose scopes overlap in the same working directory are refused
+ *     rather than allowed to race the tree (--no-overlap-check to override).
  */
 
 import { spawn, execFileSync } from 'node:child_process';
 import {
   createWriteStream, existsSync, mkdirSync, readFileSync,
-  writeFileSync, renameSync, appendFileSync,
+  writeFileSync, renameSync, appendFileSync, realpathSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline';
 import { resolveOpencodeBin } from './lib/resolve-opencode.mjs';
+import {
+  loadRepoConfig, resolveOptions, mergeAnti, scopesOverlap, globToRegExp, REPO_CONFIG_NAME,
+} from './lib/dispatch.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
@@ -53,6 +62,7 @@ const STATE_DIR = process.env.AGENT_STATE_DIR || path.join(homedir(), '.agent-sy
 const ROTATION_FILE = path.join(STATE_DIR, 'rotation.json');
 const SERVER_FILE = path.join(STATE_DIR, 'server.json');
 const LEDGER_FILE = path.join(STATE_DIR, 'ledger.jsonl');
+const ACTIVE_FILE = path.join(STATE_DIR, 'active.json');
 
 // ---------------------------------------------------------------------------
 // arg parsing
@@ -98,14 +108,24 @@ Scope & context:
   --seed "x.py,y.py"       files to attach up front (removes exploration round-trips)
   --template <name>        compose the prompt from templates/<name>.md
   --anti "<text>"          anti-patterns; stated prohibitions, one per line
+                           (repo baseline from .agent-system.json is prepended)
+
+Scope enforcement:
+  --keep-strays            do NOT auto-revert files changed outside --scope
+                           (default: tracked strays are reverted, untracked reported)
+  --no-overlap-check       allow a dispatch whose scope overlaps one already running
+                           in the same working directory (default: refuse it)
 
 Execution:
   --dir <path>             working directory (default: cwd)
   --session <id>           continue an existing session (skips repo re-exploration)
   --timeout <seconds>      default 900
   --allow-main             permit running while on the main branch
-  --revert-strays          git checkout -- any file changed outside --scope
+  --no-config              ignore <dir>/${REPO_CONFIG_NAME}
   --dry-run                print the resolved command and exit
+
+Per-repo defaults: <dir>/${REPO_CONFIG_NAME} may set tier, model, template, timeout,
+scope, seed, anti, includeUnverified, keepStrays. CLI flags win; --anti concatenates.
 
 Output: one compact JSON object on stdout. Full event stream goes to the log file.
 `);
@@ -117,6 +137,14 @@ Output: one compact JSON object on stdout. Full event stream goes to the log fil
 // ---------------------------------------------------------------------------
 
 const cwd = path.resolve(args.dir || process.cwd());
+
+// Canonical form for comparing working directories across invocations that may
+// pass --dir differently (relative vs absolute, 8.3 short name, slash direction).
+function canonDir(p) {
+  try { return realpathSync.native(path.resolve(p)); }
+  catch { return path.resolve(p); }
+}
+const cwdKey = canonDir(cwd);
 
 function git(cmdArgs, opts = {}) {
   return execFileSync('git', cmdArgs, { cwd, encoding: 'utf8', ...opts }).trim();
@@ -138,6 +166,30 @@ if (!args['allow-main'] && (branch === 'main' || branch === 'master')) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// per-repo config + option precedence
+// ---------------------------------------------------------------------------
+
+const repoCfg = args['no-config'] ? { path: null, config: {} } : loadRepoConfig(cwd);
+if (repoCfg.error) {
+  process.stderr.write(`warning: ${REPO_CONFIG_NAME} present but unparseable, ignoring it — ${repoCfg.error}\n`);
+}
+const opt = resolveOptions(args, repoCfg.config);
+const antiList = mergeAnti(args.anti === true ? null : args.anti, repoCfg.config.anti);
+
+const revertStrays = !opt.keepStrays;
+const timeoutSec = Number(opt.timeout || 900);
+
+// ---------------------------------------------------------------------------
+// scope parsing — one source of truth, used by the overlap guard, the prompt,
+// and the post-run enforcement
+// ---------------------------------------------------------------------------
+
+const scopeList = (opt.scope ? String(opt.scope).split(',') : [])
+  .map((s) => s.trim()).filter(Boolean);
+const scopeMatchers = scopeList.map(globToRegExp);
+const inScope = (f) => scopeMatchers.some((re) => re.test(f.replace(/\\/g, '/')));
+
 // Snapshot the pre-run dirty set so the scope check attributes only NEW changes.
 //
 // Note: porcelain status is column-significant — ' M path' has a leading space that
@@ -157,6 +209,54 @@ function porcelain() {
   });
 }
 const dirtyBefore = new Set(porcelain());
+
+// A file already dirty at dispatch is invisible to a set-difference of porcelain
+// output — the delegate can rewrite it wholesale and `changed` stays empty, which
+// then reads as "the run did nothing". Hash the in-scope dirty files now so the
+// result can report what was actually touched. Verified against the ledger: this
+// was the cause of ~half of "ok, 0 files" rows.
+function workingHash(rel) {
+  try { return execFileSync('git', ['hash-object', '--', rel], { cwd, encoding: 'utf8' }).trim(); }
+  catch { return null; }
+}
+const preDirtyInScope = [...dirtyBefore].filter(inScope);
+const preHash = {};
+for (const f of preDirtyInScope) preHash[f] = workingHash(f);
+
+// ---------------------------------------------------------------------------
+// concurrency: refuse an overlapping scope in the same working directory
+// ---------------------------------------------------------------------------
+
+function readActive() {
+  try { return JSON.parse(readFileSync(ACTIVE_FILE, 'utf8')); } catch { return []; }
+}
+function writeActive(list) {
+  mkdirSync(STATE_DIR, { recursive: true });
+  const tmp = `${ACTIVE_FILE}.tmp`;
+  writeFileSync(tmp, JSON.stringify(list, null, 2) + '\n');
+  renameSync(tmp, ACTIVE_FILE);
+}
+function pruneActive(list) {
+  const now = Date.now();
+  return list.filter((e) => {
+    if (!e || !e.pid || e.pid === process.pid) return false;
+    const started = Date.parse(e.started || 0) || 0;
+    if (now - started > (Number(e.timeoutSec || 900) * 1000 + 60000)) return false;
+    try { process.kill(e.pid, 0); return true; } catch { return false; }
+  });
+}
+
+if (!args['no-overlap-check'] && !args['dry-run'] && scopeList.length) {
+  const clash = pruneActive(readActive())
+    .find((e) => canonDir(e.dir || '') === cwdKey && scopesOverlap(e.scope || [], scopeList));
+  if (clash) {
+    fail('a dispatch with an overlapping scope is already active in this working directory', {
+      holder: { pid: clash.pid, scope: clash.scope, started: clash.started },
+      yours: scopeList,
+      hint: 'let it finish, make the scopes disjoint, or pass --no-overlap-check',
+    });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // tier / model resolution + rotation
@@ -182,7 +282,7 @@ function resolveTarget() {
     if (!role) fail(`unknown role '${args.role}'`, { known: Object.keys(registry.roles) });
     return { key: `role:${args.role}`, agent: role.agent, pool: role.rotation, unverified: [] };
   }
-  const tier = String(args.tier || 2);
+  const tier = String(opt.tier || 2);
   const t = registry.tiers[tier];
   if (!t) fail(`unknown tier '${tier}'`, { known: Object.keys(registry.tiers) });
   return { key: `tier${tier}`, agent: t.agent, pool: t.rotation, unverified: t.unverified || [] };
@@ -192,11 +292,11 @@ const target = resolveTarget();
 
 let model;
 let rotationIndex = null;
-if (args.model) {
-  model = String(args.model).replace(/^opencode-go\//, '');
+if (opt.model) {
+  model = String(opt.model).replace(/^opencode-go\//, '');
 } else {
   let candidates = target.pool.map((m) => m.model);
-  if (args['include-unverified']) candidates = candidates.concat(target.unverified);
+  if (opt.includeUnverified) candidates = candidates.concat(target.unverified);
   if (!candidates.length) fail(`no models available for ${target.key}`);
 
   const state = readRotation();
@@ -229,16 +329,13 @@ let taskText = args['task-file']
 
 function composePrompt() {
   let body;
-  if (args.template) {
-    const tplPath = path.join(REPO, 'templates', `${args.template}.md`);
-    if (!existsSync(tplPath)) fail(`template not found: ${args.template}`, { tplPath });
+  if (opt.template) {
+    const tplPath = path.join(REPO, 'templates', `${opt.template}.md`);
+    if (!existsSync(tplPath)) fail(`template not found: ${opt.template}`, { tplPath });
     body = readFileSync(tplPath, 'utf8');
   } else {
     body = '{{TASK}}\n\n{{SCOPE}}\n\n{{ANTI}}';
   }
-
-  const scopeList = (args.scope ? String(args.scope).split(',') : [])
-    .map((s) => s.trim()).filter(Boolean);
 
   const scopeBlock = scopeList.length
     ? `## Files you may change\n\nYou may create or modify ONLY these paths:\n` +
@@ -247,14 +344,13 @@ function composePrompt() {
       `edits and metadata. If the task cannot be done within these paths, stop and say so.`
     : '';
 
-  const antiBlock = args.anti
+  const antiBlock = antiList.length
     ? `## Anti-patterns — these are prohibited\n\n` +
-      String(args.anti).split('\n').map((l) => l.trim()).filter(Boolean)
-        .map((l) => `- ${l}`).join('\n') +
+      antiList.map((l) => `- ${l}`).join('\n') +
       `\n\nThese are not stylistic preferences. Producing any of them means the task failed.`
     : '';
 
-  const seedList = (args.seed ? String(args.seed).split(',') : [])
+  const seedList = (opt.seed ? String(opt.seed).split(',') : [])
     .map((s) => s.trim()).filter(Boolean);
   const seedBlock = seedList.length
     ? `## Read these first\n\n` + seedList.map((s) => `- \`${s}\``).join('\n') +
@@ -297,7 +393,7 @@ if (!args['no-attach'] && existsSync(SERVER_FILE)) {
 // path silently fails ("File not found") whenever the server was started from a
 // different repo than the one being targeted — which is the normal case, since one
 // warm server is meant to be reused across projects.
-for (const f of (args.seed ? String(args.seed).split(',') : [])) {
+for (const f of (opt.seed ? String(opt.seed).split(',') : [])) {
   const t = f.trim();
   if (t) runArgs.push('-f', path.resolve(cwd, t));
 }
@@ -306,6 +402,9 @@ if (args['dry-run']) {
   process.stdout.write(JSON.stringify({
     ok: true, dryRun: true, agent: target.agent, model: qualifiedModel,
     rotationIndex, attached, promptChars: prompt.length,
+    repo_config: repoCfg.path ? path.relative(cwd, repoCfg.path).replace(/\\/g, '/') : null,
+    resolved: { tier: opt.tier ?? null, scope: scopeList, seed: opt.seed || null, template: opt.template || null, revertStrays, timeoutSec },
+    anti: antiList,
     argv: [OPENCODE, ...runArgs.map((a) => (a === prompt ? '<prompt>' : a))],
   }, null, 2) + '\n');
   process.exit(0);
@@ -325,7 +424,17 @@ const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const logPath = path.join(logDir, `${stamp}-${target.key}-${model}.ndjson`);
 const logStream = createWriteStream(logPath);
 
-const timeoutSec = Number(args.timeout || 900);
+// Register in the active set so a concurrent dispatch can see our scope. Best
+// effort — a lost write just means the overlap guard misses this run.
+const activeEntry = {
+  pid: process.pid, dir: cwdKey, scope: scopeList, tier: opt.tier ?? null,
+  started: new Date().toISOString(), timeoutSec,
+};
+try { writeActive([...pruneActive(readActive()), activeEntry]); } catch { /* non-fatal */ }
+function deregister() {
+  try { writeActive(pruneActive(readActive())); } catch { /* non-fatal */ }
+}
+
 const started = Date.now();
 
 const child = spawn(OPENCODE, runArgs, {
@@ -383,44 +492,35 @@ child.on('close', (code) => {
 // scope enforcement + result
 // ---------------------------------------------------------------------------
 
-function globToRegExp(glob) {
-  // Supports ** (any depth), * (one segment), ? (one char). Paths use forward slashes.
-  const esc = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-  const body = esc
-    .replace(/\*\*\//g, '\u0000SLASHSTAR\u0000')
-    .replace(/\*\*/g, '\u0000DOUBLESTAR\u0000')
-    .replace(/\*/g, '[^/]*')
-    .replace(/\?/g, '[^/]')
-    .replace(/\u0000SLASHSTAR\u0000/g, '(?:.*/)?')
-    .replace(/\u0000DOUBLESTAR\u0000/g, '.*');
-  return new RegExp(`^${body}$`);
-}
-
 function finish(code) {
+  deregister();
+
   const wallSec = +((Date.now() - started) / 1000).toFixed(1);
 
   const dirtyAfter = porcelain();
   const changed = dirtyAfter.filter((f) => !dirtyBefore.has(f));
 
-  const scopeList = (args.scope ? String(args.scope).split(',') : [])
-    .map((s) => s.trim()).filter(Boolean);
-  const matchers = scopeList.map(globToRegExp);
+  // Everything the run actually edited inside --scope, including files that were
+  // already dirty when it started (those never show up in `changed`).
+  const touchedExtra = preDirtyInScope.filter((f) => {
+    const after = workingHash(f);
+    return after && preHash[f] && after !== preHash[f];
+  });
+  const touched = [...new Set([...changed.filter(inScope), ...touchedExtra])];
 
-  const outOfScope = scopeList.length
-    ? changed.filter((f) => !matchers.some((re) => re.test(f.replace(/\\/g, '/'))))
-    : [];
+  const outOfScope = scopeList.length ? changed.filter((f) => !inScope(f)) : [];
 
-  let reverted = [];
-  if (outOfScope.length && args['revert-strays']) {
-    for (const f of outOfScope) {
-      // Only revert tracked files. An untracked stray is reported, never deleted —
-      // deleting files is not something this process is permitted to do.
-      const tracked = gitSafe(['ls-files', '--error-unmatch', f]) !== null;
-      if (tracked && gitSafe(['checkout', '--', f]) !== null) reverted.push(f);
-    }
+  const reverted = [];
+  const straysKept = [];
+  for (const f of outOfScope) {
+    // Only revert tracked files. An untracked stray is reported, never deleted —
+    // deleting files is not something this process is permitted to do.
+    const tracked = gitSafe(['ls-files', '--error-unmatch', f]) !== null;
+    if (revertStrays && tracked && gitSafe(['checkout', '--', f]) !== null) reverted.push(f);
+    else straysKept.push(f);
   }
 
-  const ok = code === 0 && !timedOut && summary.errors.length === 0 && outOfScope.length === 0;
+  const ok = code === 0 && !timedOut && summary.errors.length === 0 && straysKept.length === 0;
 
   const result = {
     ok,
@@ -433,10 +533,13 @@ function finish(code) {
     wall_s: wallSec,
     attached,
     changed,
+    touched,
     out_of_scope: outOfScope,
     log: logPath.replace(/\\/g, '/'),
   };
+  if (repoCfg.path) result.repo_config = path.relative(cwd, repoCfg.path).replace(/\\/g, '/');
   if (reverted.length) result.reverted = reverted;
+  if (straysKept.length) result.strays_kept = straysKept;
   if (timedOut) result.error = `timed out after ${timeoutSec}s (process tree killed)`;
   else if (code !== 0) result.error = `opencode exited ${code}`;
   if (summary.errors.length) result.errors = summary.errors.slice(0, 3);

@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "Copy to a project root as .agent-system.json and commit it. delegate.mjs reads",
+    "it whenever --dir points here, so dispatches into this repo behave the same on",
+    "every machine without re-typing the routing. This is plain JSON (no comments in",
+    "the real file except this _comment array, which delegate.mjs strips).",
+    "",
+    "Every field is optional. Precedence: explicit CLI flag > this file > built-in.",
+    "  tier              1 | 2 | 3        default capability tier (built-in: 2)",
+    "  model             '<id>'           pin one model, skip rotation (e.g. 'glm-5.2')",
+    "  template          '<name>'         templates/<name>.md to compose the prompt from",
+    "  timeout           <seconds>        per-run wall limit (built-in: 900)",
+    "  scope             ['glob', ...]    default allowed paths; ** any depth, * one seg",
+    "  seed              ['path', ...]    files always attached up front",
+    "  anti              ['line', ...]    baseline prohibitions; --anti on the CLI adds",
+    "                                     to these rather than replacing them",
+    "  includeUnverified true             let unbenchmarked models into rotation",
+    "  keepStrays        true             do NOT auto-revert out-of-scope edits",
+    "",
+    "This file is NOT read by opencode as an instruction source — it is dispatcher",
+    "config only. Project instructions for the delegate still go in AGENTS.md."
+  ],
+
+  "tier": 2,
+  "scope": ["src/**", "tests/**"],
+  "anti": [
+    "never modify README.md, CHANGELOG.md, or CONTRIBUTING.md",
+    "do not touch lockfiles or CI config unless the task names them"
+  ]
+}

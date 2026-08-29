@@ -26,7 +26,7 @@
       "agent": "t2-build",
       "use": "Typical fixes and small features. 1-3 files, no architectural decisions.",
       "rotation": [
-        { "model": "kimi-k2.7-code", "swebench": null,       "confidence": "inferred",    "note": "Code-specialised variant of benchmarked kimi-k2.6." },
+        { "model": "kimi-k2.7-code", "swebench": null,       "confidence": "inferred",    "note": "Code-specialised variant of benchmarked kimi-k2.6. Ledger 2026-08: 9 scope strays / 5 runs on a docs-heavy repo — auto-revert covers it, but re-check `ledger --by-model` before trusting it with wide --scope globs." },
         { "model": "glm-5.2",        "swebench": "62.1 Pro", "confidence": "benchmarked", "note": "Briefly led open-weights on SWE-bench Pro. Arguably tier 3." },
         { "model": "qwen3.7-plus",   "swebench": null,       "confidence": "inferred",    "note": "Same family as benchmarked qwen3.7-max." },
         { "model": "qwen3.6-plus",   "swebench": null,       "confidence": "inferred",    "note": "Older generation of qwen3.7-plus." }

@@ -72,7 +72,9 @@ else to configure.
 You're set up. See [Running the system](#running-the-system) below for how to
 actually dispatch a task, or open a project with Claude Code and just describe what
 you want — the `delegate` skill routes it through this system automatically once
-step 3 has deployed it globally.
+step 3 has deployed it globally. Phrasing the request in the four-field shape from
+[docs/REQUEST-BRIEF.md](docs/REQUEST-BRIEF.md) keeps the orchestrator from spending
+context on exploration it doesn't need to do.
 
 ## Repository layout
 
@@ -145,6 +147,13 @@ node bin/delegate.mjs --tier 2 --template implement \
   --anti  "Do not add a new dependency"
 ```
 
-`--scope` is enforced: files changed outside it are reported, and reverted with
-`--revert-strays`. `--seed` names files up front so the delegate skips exploration
-round-trips — the cheapest latency win available.
+`--scope` is enforced: tracked files changed outside it are reverted automatically
+(`--keep-strays` to opt out), untracked ones reported in `strays_kept`. `--seed` names
+files up front so the delegate skips exploration round-trips — the cheapest latency win
+available.
+
+A repo can carry its own `.agent-system.json` (tier, model, scope, baseline
+anti-patterns) so dispatches into it are standard without re-typing the flags — see
+[templates/project/agent-system.json](templates/project/agent-system.json). Two
+dispatches with overlapping scopes in one working directory are refused rather than left
+to race the tree.
