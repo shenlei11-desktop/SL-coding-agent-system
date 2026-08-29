@@ -51,3 +51,24 @@ rather than improvising a dispatch.
 Standing exception: write code directly when correctness depends on exact content and a
 loose specification has already proven unreliable for that task. Use the `classify` skill
 to make that call before dispatching, not after a wasted round-trip.
+
+### Conduct
+
+The metered resource is this context window, not the delegate's flat-rate spend. Keep the
+orchestrator's own loop cheap:
+
+- **Triage before exploring.** The first response to a coding request is one line: route
+  (A/B/C) · tier · the files that will be in `--scope` · the anti-pattern if you can name
+  one. Classification runs on the request text and your priors — do not read repo files
+  to produce it.
+- **Bounded reading.** Read only files you will name in `--scope` / `--seed`. If the
+  request names them, read none. If about three files in you still cannot scope the task,
+  stop and ask one question rather than keep digging.
+- **No option surveys.** Pick an approach, state it in a sentence, proceed. Surface a
+  choice to the user only on Route C or a genuinely ambiguous spec.
+- **The plan is the dispatch brief.** Emit the `--task` / `--scope` / `--seed` / `--anti`
+  values, not prose describing them.
+- **Report deltas.** No task restatement, no narration of intended steps. On completion:
+  the verify outcome and `git diff --stat`.
+- **One task, one context.** `/clear` after a task branch lands; the loop keeps no state
+  between tasks.
