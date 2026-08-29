@@ -25,8 +25,12 @@ the orchestrator skip its own exploration and go straight to a dispatch.
 
 ## Per-repo standardisation
 
-Drop `.agent-system.json` at a target repo's root (seed it from
-`templates/project/agent-system.json`) to fix that repo's routing once — `tier`, `model`,
+First time in a repo: from inside it, launch `claude` and ask it to *set the repo up for
+the agent system, following `ONBOARD-REPO.md`*. `docs/ONBOARD-REPO.md` is the procedure —
+branch, draft `AGENTS.md` (read by opencode) and `.agent-system.json` (read by the
+dispatcher) from the repo's own contents, sanity-check, commit just those.
+
+`.agent-system.json` at the repo root fixes that repo's routing once — `tier`, `model`,
 `scope`, `seed`, `template`, and a baseline `anti` list. After that a dispatch into it is
 just `--task`, and it behaves the same on every machine. CLI flags override the file,
 `--anti` adds to its baseline, `--no-config` ignores it, `--dry-run` shows what resolved.

@@ -76,6 +76,11 @@ step 3 has deployed it globally. Phrasing the request in the four-field shape fr
 [docs/REQUEST-BRIEF.md](docs/REQUEST-BRIEF.md) keeps the orchestrator from spending
 context on exploration it doesn't need to do.
 
+**Bringing a new repo into the system?** From inside it, launch `claude` and say
+*"set up this repo for the agent system — follow `ONBOARD-REPO.md`"*. The procedure
+is [docs/ONBOARD-REPO.md](docs/ONBOARD-REPO.md): a branch, an `AGENTS.md`, and an
+`.agent-system.json`, then the per-task loop.
+
 ## Repository layout
 
 ```
