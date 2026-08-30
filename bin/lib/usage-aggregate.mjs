@@ -13,6 +13,9 @@
 export const STEPS_PER_FILE_STDEV_THRESHOLD = 1.5;
 export const ATTACH_RATE_THRESHOLD = 0.8;
 export const WALL_S_ZSCORE_THRESHOLD = 2;
+export const CACHE_REUSE_THRESHOLD = 0.3;
+export const UNDER_DELEGATION_THRESHOLD = 0.7;
+export const UNDER_DELEGATION_FLOOR_USD = 0.5;
 
 /**
  * Group unified rows by a composite '<source>/<model>' key so that the same
@@ -274,3 +277,89 @@ export function wallTimeOutliers(rows) {
   }
   return findings;
 }
+
+/**
+ * Detect Claude Code sessions with poor cache reuse. For each session_id
+ * group, sum input, cache_write, and cache_read tokens (treating null as 0).
+ * cacheReuseRatio = cache_read / max(1, input + cache_write + cache_read).
+ * Returns one finding per session, flagged when the ratio falls below
+ * CACHE_REUSE_THRESHOLD.
+ */
+export function poorCacheReuse(rows) {
+  const findings = [];
+  const by = new Map();
+  for (const r of rows) {
+    if (r.source !== 'claude') continue;
+    const sessionId = r.ext?.session_id ?? 'unknown';
+    const e = by.get(sessionId) || {
+      sessionId,
+      summedInput: 0,
+      summedCacheWrite: 0,
+      summedCacheRead: 0,
+      rowCount: 0,
+    };
+    e.summedInput += r.tokens?.input ?? 0;
+    e.summedCacheWrite += r.tokens?.cache_write ?? 0;
+    e.summedCacheRead += r.tokens?.cache_read ?? 0;
+    e.rowCount++;
+    by.set(sessionId, e);
+  }
+  for (const {
+    sessionId,
+    summedInput,
+    summedCacheWrite,
+    summedCacheRead,
+    rowCount,
+  } of by.values()) {
+    const denominator = Math.max(
+      1,
+      summedInput + summedCacheWrite + summedCacheRead
+    );
+    const cacheReuseRatio = summedCacheRead / denominator;
+    findings.push({
+      metric: 'poor_cache_reuse',
+      group: sessionId,
+      value: cacheReuseRatio,
+      threshold: CACHE_REUSE_THRESHOLD,
+      flagged: cacheReuseRatio < CACHE_REUSE_THRESHOLD,
+      evidence: { summedInput, summedCacheWrite, summedCacheRead, rowCount },
+    });
+  }
+  return findings;
+}
+
+/**
+ * Detect days where the bulk of a repo's spending went through Claude Code
+ * rather than being delegated to opencode. Groups rows by '<repo>/<day>'
+ * using a string slice of the ISO timestamp. Sums claude and opencode spend
+ * separately; groups with claudeSpend <= UNDER_DELEGATION_FLOOR_USD are
+ * skipped entirely.
+ */
+export function underDelegation(rows) {
+  const findings = [];
+  const by = new Map();
+  for (const r of rows) {
+    if (r.source !== 'opencode' && r.source !== 'claude') continue;
+    const day = String(r.ts || '').slice(0, 10) || 'unknown';
+    const k = `${r.repo || 'unknown'}/${day}`;
+    const e = by.get(k) || { key: k, claudeSpend: 0, opencodeSpend: 0 };
+    if (r.source === 'claude') e.claudeSpend += r.cost_usd || 0;
+    if (r.source === 'opencode') e.opencodeSpend += r.cost_usd || 0;
+    by.set(k, e);
+  }
+  for (const { key, claudeSpend, opencodeSpend } of by.values()) {
+    if (claudeSpend <= UNDER_DELEGATION_FLOOR_USD) continue;
+    const delegationGap =
+      claudeSpend / Math.max(0.0001, claudeSpend + opencodeSpend);
+    findings.push({
+      metric: 'under_delegation',
+      group: key,
+      value: delegationGap,
+      threshold: UNDER_DELEGATION_THRESHOLD,
+      flagged: delegationGap > UNDER_DELEGATION_THRESHOLD,
+      evidence: { claudeSpend, opencodeSpend },
+    });
+  }
+  return findings;
+}
+
