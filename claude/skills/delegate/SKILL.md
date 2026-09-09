@@ -29,6 +29,28 @@ context** — it duplicates whole file contents per tool call and will flood the
 The log path is in the result if a failure genuinely needs investigating; grep it for a
 specific field rather than reading it.
 
+## Reconnaissance dispatch (exploration is delegated too)
+
+Codebase exploration is token-heavy and it is the orchestrator's context that pays for
+it, so it goes to opencode by default — not just when the user asks. When a request
+cannot be scoped without first understanding the code, dispatch the investigation:
+
+```bash
+node <system>/bin/delegate.mjs \
+  --tier 2 \
+  --scope "RECON.md" \
+  --task "Investigate how <X> works in this repo. Write your findings to RECON.md:
+the entry point, the call chain, the files and line numbers that matter, and any
+gotchas. Do not change any other file. Do not attempt a fix." \
+  --dir "<repo path>"
+```
+
+The findings come back as a real file you read once (not the ~600-char `reply` tail, which
+is too small for this). `RECON.md` is a scratch artifact — read it, plan from it, then
+have it removed. A tier agent (not `--role oneshot`, which has no tool loop) is required.
+For a follow-up question on the same area, pass `--session <id>` from the recon result so
+it keeps the context it built.
+
 ## The dispatch is standardised per repo
 
 A target repo may carry `.agent-system.json` at its root setting the defaults for that

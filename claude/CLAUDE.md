@@ -64,6 +64,15 @@ orchestrator's own loop cheap:
 - **Bounded reading.** Read only files you will name in `--scope` / `--seed`. If the
   request names them, read none. If about three files in you still cannot scope the task,
   stop and ask one question rather than keep digging.
+- **Delegate exploration; do not perform it.** When a task cannot be scoped without first
+  understanding the code — how a feature works, where every call site is, why something
+  breaks — that investigation is itself a delegate job, not something to do by reading
+  widely in this window. Dispatch a recon run (a tier agent, `--scope` limited to a
+  single scratch notes file, `--task` = "investigate X; write findings — entry points,
+  call chain, files:lines, gotchas — to `<file>`; change nothing else"), read that one
+  file back, then plan from it. The three-files-then-ask limit above is the ceiling on
+  what the orchestrator reads directly; past it, the answer is a recon dispatch. This is
+  the default, not something the user has to ask for.
 - **No option surveys.** Pick an approach, state it in a sentence, proceed. Surface a
   choice to the user only on Route C or a genuinely ambiguous spec.
 - **The plan is the dispatch brief.** Emit the `--task` / `--scope` / `--seed` / `--anti`
