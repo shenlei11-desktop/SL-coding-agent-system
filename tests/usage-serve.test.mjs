@@ -1,7 +1,7 @@
-import { test } from 'node:test';
+import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPayload } from '../scripts/usage-serve.mjs';
+import { buildPayload, filterRows } from '../scripts/usage-serve.mjs';
 
 // A small unified-row set spanning both sources, two repos, two days.
 const ROWS = [
@@ -68,4 +68,51 @@ test('buildPayload: empty input produces a well-formed empty payload', () => {
   assert.deepEqual(p.byModel, []);
   assert.deepEqual(p.byDay, []);
   assert.deepEqual(p.bottlenecks, []);
+});
+
+describe('filterRows', () => {
+  const BASE = Date.parse('2026-08-21T00:00:00.000Z');
+
+  test('keeps only rows matching the requested device', () => {
+    const out = filterRows(ROWS, { device: 'b' });
+    assert.deepEqual(out.map((r) => r.device_id), ['b', 'b']);
+  });
+
+  test('device "all" keeps every row', () => {
+    const out = filterRows(ROWS, { device: 'all' });
+    assert.equal(out.length, ROWS.length);
+  });
+
+  test('falsy device keeps every row', () => {
+    const out = filterRows(ROWS, { device: '' });
+    assert.equal(out.length, ROWS.length);
+  });
+
+  test('"7d" keeps rows within the last seven days', () => {
+    const rows = [
+      { ts: new Date(BASE - 7 * 24 * 60 * 60 * 1000 + 1).toISOString(), device_id: 'a' },
+      { ts: new Date(BASE - 7 * 24 * 60 * 60 * 1000 - 1).toISOString(), device_id: 'b' },
+    ];
+    const out = filterRows(rows, { window: '7d', now: BASE });
+    assert.deepEqual(out.map((r) => r.device_id), ['a']);
+  });
+
+  test('"30d" keeps rows within the last thirty days', () => {
+    const rows = [
+      { ts: new Date(BASE - 30 * 24 * 60 * 60 * 1000 + 1).toISOString(), device_id: 'a' },
+      { ts: new Date(BASE - 30 * 24 * 60 * 60 * 1000 - 1).toISOString(), device_id: 'b' },
+    ];
+    const out = filterRows(rows, { window: '30d', now: BASE });
+    assert.deepEqual(out.map((r) => r.device_id), ['a']);
+  });
+
+  test('unknown window string is passthrough', () => {
+    const out = filterRows(ROWS, { window: 'nonsense' });
+    assert.equal(out.length, ROWS.length);
+  });
+
+  test('empty input returns an empty array', () => {
+    const out = filterRows([], { device: 'a', window: '7d' });
+    assert.deepEqual(out, []);
+  });
 });

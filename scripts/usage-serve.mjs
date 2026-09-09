@@ -99,11 +99,32 @@ export function buildPayload(rows) {
   };
 }
 
+const WINDOW_MS = {
+  '7d': 7 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000,
+};
+
+/**
+ * Pure row filter for device and time window. Never mutates the input.
+ */
+export function filterRows(rows, { device, window, now }) {
+  const cutoffMs = WINDOW_MS[window];
+  const cutoff = cutoffMs ? (now ?? Date.now()) - cutoffMs : null;
+  return rows.filter((row) => {
+    if (device && device !== 'all' && row.device_id !== device) return false;
+    if (cutoff !== null && Number.isFinite(cutoff)) {
+      const ts = Date.parse(row.ts);
+      if (Number.isNaN(ts) || ts < cutoff) return false;
+    }
+    return true;
+  });
+}
+
 /**
  * Refresh the local snapshot (best effort) and assemble the payload from every
  * device's committed snapshot.
  */
-function readAndBuild() {
+function readAndBuild({ device, window } = {}) {
   let refresh = null;
   try {
     refresh = writeLocalSnapshot();
@@ -112,13 +133,21 @@ function readAndBuild() {
   }
   const { usageDir } = resolvePaths();
   const rows = readAllDeviceSnapshots(usageDir);
-  return { ...buildPayload(rows), refresh };
+  const devices = [...new Set(rows.map((r) => r.device_id))].sort();
+  const filtered = filterRows(rows, { device, window });
+  return {
+    ...buildPayload(filtered),
+    devices,
+    filter: { device: device || 'all', window: window || 'all' },
+    refresh,
+  };
 }
 
 function start() {
   const server = createServer((req, res) => {
-    const url = (req.url || '/').split('?')[0];
-    if (url === '/' || url === '/index.html') {
+    const url = new URL(req.url || '/', 'http://x');
+    const pathname = url.pathname;
+    if (pathname === '/' || pathname === '/index.html') {
       try {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         res.end(readFileSync(HTML_FILE, 'utf8'));
@@ -128,9 +157,13 @@ function start() {
       }
       return;
     }
-    if (url === '/api/data') {
+    if (pathname === '/api/data') {
       try {
-        const body = JSON.stringify(readAndBuild());
+        const params = {
+          device: url.searchParams.get('device') || undefined,
+          window: url.searchParams.get('window') || undefined,
+        };
+        const body = JSON.stringify(readAndBuild(params));
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
         res.end(body);
       } catch (e) {
