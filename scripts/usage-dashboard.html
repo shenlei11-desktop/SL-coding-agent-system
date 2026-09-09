@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>usage dashboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --plane:        #f9f9f7;
+    --surface:      #fcfcfb;
+    --ink:          #0b0b0b;
+    --ink-2:        #52514e;
+    --muted:        #898781;
+    --grid:         #e1e0d9;
+    --baseline:     #c3c2b7;
+    --border:       rgba(11,11,11,0.10);
+    --claude:       #2a78d6;
+    --opencode:     #eb6834;
+    --warning:      #fab219;
+    --serious:      #ec835a;
+    --critical:     #d03b3b;
+    --good:         #0ca30c;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --plane:      #0d0d0d;
+      --surface:    #1a1a19;
+      --ink:        #ffffff;
+      --ink-2:      #c3c2b7;
+      --muted:      #898781;
+      --grid:       #2c2c2a;
+      --baseline:   #383835;
+      --border:     rgba(255,255,255,0.10);
+      --claude:     #3987e5;
+      --opencode:   #d95926;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--plane);
+    color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--claude); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 22px 64px; }
+
+  header {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    justify-content: space-between; gap: 8px 20px; margin-bottom: 22px;
+  }
+  header h1 {
+    margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.02em;
+    text-transform: lowercase; color: var(--ink-2);
+  }
+  .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .meta .dot { margin: 0 6px; opacity: 0.5; }
+
+  .kpis {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 26px;
+  }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .kpi .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .kpi .value { margin-top: 6px; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi.hero { grid-column: span 2; }
+  .kpi.hero .value { font-size: 40px; line-height: 1.05; letter-spacing: -0.01em; }
+  .kpi .sub { margin-top: 2px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  @media (max-width: 520px) { .kpi.hero { grid-column: span 1; } }
+
+  .legend { display: flex; gap: 18px; align-items: center; margin: 0 0 14px 2px; font-size: 12px; color: var(--ink-2); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  .sw-claude { background: var(--claude); }
+  .sw-opencode { background: var(--opencode); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 18px 20px; margin-bottom: 18px;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+
+  /* horizontal bars */
+  .hbars { display: flex; flex-direction: column; gap: 9px; }
+  .hbar { display: grid; grid-template-columns: 190px 1fr 74px; align-items: center; gap: 12px; }
+  .hbar .name { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hbar .track {
+    display: flex; gap: 2px; height: 16px; border-radius: 4px;
+    background: var(--grid); overflow: hidden;
+  }
+  .hbar .seg { height: 100%; min-width: 0; }
+  .hbar .seg:first-child { border-radius: 4px 0 0 4px; }
+  .hbar .seg:last-child  { border-radius: 0 4px 4px 0; }
+  .hbar .seg.only { border-radius: 4px; }
+  .seg-claude { background: var(--claude); }
+  .seg-opencode { background: var(--opencode); }
+  .hbar .amt { font-size: 12px; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* day columns */
+  .cols { display: flex; align-items: flex-end; gap: 3px; height: 168px; padding-top: 6px; border-bottom: 1px solid var(--baseline); }
+  .col { flex: 1 1 0; min-width: 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 100%; cursor: default; }
+  .col .p { width: 100%; border-radius: 2px; }
+  .p-claude { background: var(--claude); }
+  .p-opencode { background: var(--opencode); }
+  .axis { display: flex; gap: 3px; margin-top: 6px; }
+  .axis span { flex: 1 1 0; min-width: 8px; font-size: 10px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; overflow: hidden; white-space: nowrap; }
+
+  /* bottlenecks */
+  .bn-group { margin-bottom: 16px; }
+  .bn-group:last-child { margin-bottom: 0; }
+  .bn-metric { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .sev { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); }
+  .sev i { display: inline-block; width: 7px; height: 7px; border-radius: 999px; margin-right: 5px; vertical-align: 0; }
+  .sev-serious i { background: var(--serious); }
+  .sev-warning i { background: var(--warning); }
+  .sev-critical i { background: var(--critical); }
+  table.bn { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.bn td { padding: 4px 8px 4px 0; border-top: 1px solid var(--grid); vertical-align: top; font-variant-numeric: tabular-nums; }
+  table.bn tr:first-child td { border-top: 0; }
+  table.bn .g { color: var(--ink-2); }
+  table.bn .v { text-align: right; white-space: nowrap; color: var(--ink); }
+  table.bn .e { color: var(--muted); }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 40px 0; text-align: center; }
+
+  #tip {
+    position: fixed; z-index: 20; pointer-events: none; opacity: 0;
+    transition: opacity .08s; background: var(--ink); color: var(--surface);
+    font-size: 11.5px; line-height: 1.45; padding: 7px 9px; border-radius: 6px;
+    max-width: 260px; font-variant-numeric: tabular-nums;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
+  #tip b { font-weight: 600; }
+  #tip .k { color: var(--baseline); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>usage dashboard</h1>
+    <div class="meta" id="meta">loading…</div>
+  </header>
+  <div id="root"><div class="empty">loading…</div></div>
+</div>
+<div id="tip"></div>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
+const usd = n => '$' + (n||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const usd0 = n => '$' + Math.round(n||0).toLocaleString('en-US');
+const pct = n => (n*100).toFixed(n >= 0.1 ? 0 : 1) + '%';
+function compact(n) {
+  n = n || 0;
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return String(n);
+}
+
+const tip = $('#tip');
+function bindTip(node, html) {
+  node.addEventListener('mouseenter', () => { tip.innerHTML = html; tip.style.opacity = '1'; });
+  node.addEventListener('mousemove', e => {
+    const pad = 14;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    const r = tip.getBoundingClientRect();
+    if (x + r.width > innerWidth) x = e.clientX - pad - r.width;
+    if (y + r.height > innerHeight) y = e.clientY - pad - r.height;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  node.addEventListener('mouseleave', () => { tip.style.opacity = '0'; });
+}
+
+function hbars(rows, limit) {
+  const wrap = el('div', 'hbars');
+  const shown = rows.slice(0, limit);
+  const max = Math.max(1, ...shown.map(r => r.total));
+  for (const r of shown) {
+    const row = el('div', 'hbar');
+    row.appendChild(el('div', 'name', r.name)).title = r.name;
+    const track = el('div', 'track');
+    const cw = (r.claude / max) * 100;
+    const ow = (r.opencode / max) * 100;
+    const single = (r.claude === 0) || (r.opencode === 0);
+    if (r.claude > 0) {
+      const s = el('div', 'seg seg-claude' + (single ? ' only' : ''));
+      s.style.flexBasis = cw + '%'; track.appendChild(s);
+    }
+    if (r.opencode > 0) {
+      const s = el('div', 'seg seg-opencode' + (single ? ' only' : ''));
+      s.style.flexBasis = ow + '%'; track.appendChild(s);
+    }
+    row.appendChild(track);
+    row.appendChild(el('div', 'amt', usd(r.total)));
+    const passRate = r.runs ? Math.round((r.okRuns / r.runs) * 100) + '%' : '—';
+    bindTip(row,
+      `<b>${r.name}</b><br>` +
+      `<span class="k">claude</span> ${usd(r.claude)} &nbsp; <span class="k">opencode</span> ${usd(r.opencode)}<br>` +
+      `<span class="k">runs</span> ${r.runs} &nbsp; <span class="k">opencode pass</span> ${passRate}` +
+      (r.tokensIn || r.cacheRead
+        ? `<br><span class="k">tok in/out</span> ${compact(r.tokensIn)}/${compact(r.tokensOut)} &nbsp; <span class="k">cache rd</span> ${compact(r.cacheRead)}`
+        : ''));
+    wrap.appendChild(row);
+  }
+  return wrap;
+}
+
+function dayCols(days) {
+  const box = el('div');
+  const cols = el('div', 'cols');
+  const max = Math.max(1, ...days.map(d => d.total));
+  for (const d of days) {
+    const c = el('div', 'col');
+    const ch = (d.claude / max) * 100;
+    const oh = (d.opencode / max) * 100;
+    if (d.opencode > 0) { const p = el('div', 'p p-opencode'); p.style.height = oh + '%'; c.appendChild(p); }
+    if (d.claude > 0) { const p = el('div', 'p p-claude'); p.style.height = ch + '%'; c.appendChild(p); }
+    bindTip(c, `<b>${d.day}</b><br><span class="k">claude</span> ${usd(d.claude)} &nbsp; <span class="k">opencode</span> ${usd(d.opencode)}<br><span class="k">total</span> ${usd(d.total)}`);
+    cols.appendChild(c);
+  }
+  box.appendChild(cols);
+  const axis = el('div', 'axis');
+  const step = Math.ceil(days.length / 8) || 1;
+  days.forEach((d, i) => {
+    const s = el('span', null, i % step === 0 ? d.day.slice(5) : '');
+    axis.appendChild(s);
+  });
+  box.appendChild(axis);
+  return box;
+}
+
+const SEVERITY = {
+  under_delegation: 'serious',
+  wasted_dispatch: 'warning',
+  wall_time_outlier: 'warning',
+  under_seeded: 'warning',
+  poor_cache_reuse: 'serious',
+  missing_warm_server: 'warning',
+};
+const METRIC_LABEL = {
+  under_delegation: 'under-delegation',
+  wasted_dispatch: 'wasted dispatch',
+  wall_time_outlier: 'wall-time outlier',
+  under_seeded: 'under-seeded task',
+  poor_cache_reuse: 'poor cache reuse',
+  missing_warm_server: 'missing warm server',
+};
+
+function bottlenecks(list) {
+  const wrap = el('div');
+  if (!list.length) { wrap.appendChild(el('div', 'empty', 'nothing flagged')); return wrap; }
+  const groups = new Map();
+  for (const f of list) { if (!groups.has(f.metric)) groups.set(f.metric, []); groups.get(f.metric).push(f); }
+  for (const [metric, items] of groups) {
+    const g = el('div', 'bn-group');
+    const h = el('div', 'bn-metric');
+    h.appendChild(el('span', null, (METRIC_LABEL[metric] || metric) + ' · ' + items.length));
+    const sev = SEVERITY[metric] || 'warning';
+    const badge = el('span', 'sev sev-' + sev);
+    badge.appendChild(el('i'));
+    badge.appendChild(document.createTextNode(sev));
+    h.appendChild(badge);
+    g.appendChild(h);
+    const t = el('table', 'bn');
+    for (const f of items) {
+      const tr = el('tr');
+      tr.appendChild(el('td', 'g', f.group));
+      const v = el('td', 'v', Number(f.value).toFixed(3) + (f.threshold == null ? '' : ' / ' + Number(f.threshold).toFixed(2)));
+      tr.appendChild(v);
+      tr.appendChild(el('td', 'e', shortEvidence(f.evidence)));
+      t.appendChild(tr);
+    }
+    g.appendChild(t);
+    wrap.appendChild(g);
+  }
+  return wrap;
+}
+function shortEvidence(e) {
+  if (!e || typeof e !== 'object') return '';
+  if ('claudeSpend' in e) return `claude ${usd(e.claudeSpend)} vs opencode ${usd(e.opencodeSpend)}`;
+  if ('wastedCount' in e) return `${e.wastedCount} of ${e.okCount} ok runs wrote nothing`;
+  if ('wall_s' in e) return `${Math.round(e.wall_s)}s`;
+  if ('steps' in e) return `${e.steps} steps / ${e.touched} file(s)`;
+  if ('summedCacheRead' in e) return `cache-read ${compact(e.summedCacheRead)} of ${compact(e.summedInput + e.summedCacheWrite + e.summedCacheRead)}`;
+  return JSON.stringify(e);
+}
+
+function card(title, node) {
+  const c = el('div', 'card');
+  c.appendChild(el('h2', null, title));
+  c.appendChild(node);
+  return c;
+}
+
+function render(d) {
+  const s = d.summary;
+  const oc = s.bySource.opencode || 0;
+  const cl = s.bySource.claude || 0;
+  const delegated = s.totalCost > 0 ? oc / s.totalCost : 0;
+
+  const meta = [];
+  meta.push('updated ' + new Date(d.generatedAt).toLocaleTimeString());
+  if (s.firstTs) meta.push(s.firstTs.slice(0, 10) + ' → ' + s.lastTs.slice(0, 10));
+  meta.push(s.deviceCount + (s.deviceCount === 1 ? ' device' : ' devices'));
+  $('#meta').textContent = meta.join('  ·  ');
+
+  const root = $('#root');
+  root.innerHTML = '';
+  if (!s.totalRows) {
+    root.appendChild(el('div', 'empty', 'no usage rows yet — run  npm run usage:snapshot  on each device, then commit usage/'));
+    return;
+  }
+
+  const kpis = el('div', 'kpis');
+  const mk = (label, value, sub, hero) => {
+    const k = el('div', 'kpi' + (hero ? ' hero' : ''));
+    k.appendChild(el('div', 'label', label));
+    k.appendChild(el('div', 'value', value));
+    if (sub) k.appendChild(el('div', 'sub', sub));
+    return k;
+  };
+  kpis.appendChild(mk('total spend', usd0(s.totalCost), s.totalRows.toLocaleString('en-US') + ' rows', true));
+  kpis.appendChild(mk('claude code', usd0(cl), pct(s.totalCost ? cl / s.totalCost : 0) + ' of spend'));
+  kpis.appendChild(mk('opencode', usd0(oc), pct(delegated) + ' of spend'));
+  kpis.appendChild(mk('delegated share', pct(delegated), 'by cost'));
+  kpis.appendChild(mk('bottlenecks', String(d.bottlenecks.length), 'flagged findings'));
+  root.appendChild(kpis);
+
+  const legend = el('div', 'legend');
+  legend.innerHTML = '<span><i class="sw-claude"></i>Claude Code</span><span><i class="sw-opencode"></i>opencode</span>';
+  root.appendChild(legend);
+
+  root.appendChild(card('spend by repository', hbars(d.byRepo, 12)));
+  root.appendChild(card('spend by model', hbars(d.byModel, 12)));
+  root.appendChild(card('spend by day', dayCols(d.byDay)));
+  root.appendChild(card('bottlenecks', bottlenecks(d.bottlenecks)));
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/api/data', { cache: 'no-store' });
+    const d = await r.json();
+    if (d.error) { $('#meta').textContent = 'error: ' + d.error; return; }
+    render(d);
+  } catch (e) {
+    $('#meta').textContent = 'offline — retrying…';
+  }
+}
+poll();
+setInterval(poll, 15000);
+</script>
+</body>
+</html>

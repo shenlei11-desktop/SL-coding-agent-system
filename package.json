@@ -14,7 +14,10 @@
     "delegate": "node bin/delegate.mjs",
     "doctor": "node scripts/doctor.mjs",
     "ledger": "node scripts/ledger.mjs",
+    "usage": "node scripts/usage.mjs",
+    "usage:snapshot": "node scripts/usage-snapshot.mjs",
+    "usage:serve": "node scripts/usage-serve.mjs",
     "verify": "node scripts/verify.mjs",
-    "test": "node --test tests/"
+    "test": "node scripts/run-tests.mjs"
   }
 }

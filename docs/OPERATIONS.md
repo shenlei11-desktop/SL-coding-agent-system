@@ -21,7 +21,10 @@ test-tampering scan, then the repo's own typecheck/lint/test — as an ordered g
 stops at the first hard failure, so "green" is mechanical rather than remembered.
 
 Write the request itself in the four-field shape from `REQUEST-BRIEF.md` — it is what lets
-the orchestrator skip its own exploration and go straight to a dispatch.
+the orchestrator skip its own exploration and go straight to a dispatch. When exploration
+genuinely cannot be skipped, the orchestrator delegates *that* too — a recon run scoped to
+a single notes file (see the `delegate` skill) — rather than reading widely in its own
+context.
 
 ## Per-repo standardisation
 

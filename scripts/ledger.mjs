@@ -17,6 +17,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { parseOpencodeLedger, aggregateByModel, aggregateByRepo, aggregateByBranch } from '../bin/lib/ledger.mjs';
 
 const STATE_DIR = process.env.AGENT_STATE_DIR || path.join(homedir(), '.agent-system', 'state');
 const LEDGER = path.join(STATE_DIR, 'ledger.jsonl');
@@ -26,9 +27,7 @@ if (!existsSync(LEDGER)) {
   process.exit(0);
 }
 
-const rows = readFileSync(LEDGER, 'utf8').split('\n').filter(Boolean)
-  .map((l) => { try { return JSON.parse(l); } catch { return null; } })
-  .filter(Boolean);
+const rows = parseOpencodeLedger(readFileSync(LEDGER, 'utf8'));
 
 const args = process.argv.slice(2);
 const argVal = (name, dflt) => {
@@ -48,16 +47,7 @@ if (args.includes('--failures')) {
 }
 
 if (args.includes('--by-model')) {
-  const by = new Map();
-  for (const r of rows) {
-    const k = r.model || 'unknown';
-    const e = by.get(k) || { runs: 0, ok: 0, cost: 0, wall: 0, strays: 0, noWrite: 0 };
-    e.runs++; if (r.ok) e.ok++;
-    e.cost += r.cost || 0; e.wall += r.wall_s || 0;
-    e.strays += (r.out_of_scope || []).length;
-    if (r.ok && !(r.touched || r.changed || []).length) e.noWrite++;
-    by.set(k, e);
-  }
+  const by = aggregateByModel(rows);
   console.log('\n  model                          runs   pass%   avg s   avg $   strays  ok/0files');
   console.log('  ' + '-'.repeat(78));
   const sorted = [...by.entries()].sort((a, b) => b[1].runs - a[1].runs);
@@ -71,6 +61,36 @@ if (args.includes('--by-model')) {
   console.log('  a run can pass here and still be wrong. Judge tiers on both.');
   console.log('  ok/0files = passed but wrote nothing; a high count means misrouted or');
   console.log('  under-specified tasks, not a bad model.\n');
+  process.exit(0);
+}
+
+if (args.includes('--by-repo')) {
+  const by = aggregateByRepo(rows);
+  console.log('\n  repo                           runs   pass%   avg s   avg $   strays  ok/0files');
+  console.log('  ' + '-'.repeat(78));
+  const sorted = [...by.entries()].sort((a, b) => b[1].runs - a[1].runs);
+  for (const [m, e] of sorted) {
+    const pass = ((e.ok / e.runs) * 100).toFixed(0).padStart(4);
+    const avgS = (e.wall / e.runs).toFixed(1).padStart(6);
+    const avgC = (e.cost / e.runs).toFixed(4).padStart(7);
+    console.log(`  ${m.padEnd(30)} ${String(e.runs).padStart(4)}   ${pass}%  ${avgS}  ${avgC}  ${String(e.strays).padStart(6)}  ${String(e.noWrite).padStart(6)}`);
+  }
+  console.log();
+  process.exit(0);
+}
+
+if (args.includes('--by-branch')) {
+  const by = aggregateByBranch(rows);
+  console.log('\n  branch                         runs   pass%   avg s   avg $   strays  ok/0files');
+  console.log('  ' + '-'.repeat(78));
+  const sorted = [...by.entries()].sort((a, b) => b[1].runs - a[1].runs);
+  for (const [m, e] of sorted) {
+    const pass = ((e.ok / e.runs) * 100).toFixed(0).padStart(4);
+    const avgS = (e.wall / e.runs).toFixed(1).padStart(6);
+    const avgC = (e.cost / e.runs).toFixed(4).padStart(7);
+    console.log(`  ${m.padEnd(30)} ${String(e.runs).padStart(4)}   ${pass}%  ${avgS}  ${avgC}  ${String(e.strays).padStart(6)}  ${String(e.noWrite).padStart(6)}`);
+  }
+  console.log();
   process.exit(0);
 }
 
