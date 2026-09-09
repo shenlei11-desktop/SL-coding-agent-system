@@ -16,6 +16,7 @@
     "ledger": "node scripts/ledger.mjs",
     "usage": "node scripts/usage.mjs",
     "usage:snapshot": "node scripts/usage-snapshot.mjs",
+    "usage:serve": "node scripts/usage-serve.mjs",
     "verify": "node scripts/verify.mjs",
     "test": "node scripts/run-tests.mjs"
   }
