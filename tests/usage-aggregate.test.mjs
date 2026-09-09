@@ -7,6 +7,7 @@ import {
   byDay,
   wastedDispatches,
   missingWarmServer,
+  WASTED_DISPATCH_THRESHOLD,
 } from '../bin/lib/usage-aggregate.mjs';
 
 function row(overrides = {}) {
@@ -149,7 +150,7 @@ test('byDay: empty input yields empty map', () => {
 
 // --- wastedDispatches -----------------------------------------------------------
 
-test('wastedDispatches: computes rate = touched-zero ok rows / all ok rows and flags when > 0', () => {
+test('wastedDispatches: computes rate = touched-zero ok rows / all ok rows and flags when above the threshold', () => {
   const rows = [
     row({ source: 'opencode', model: 'm-waste', ok: true, ext: { touched: 0 } }),
     row({ source: 'opencode', model: 'm-waste', ok: true, ext: { touched: 1 } }),
@@ -160,6 +161,8 @@ test('wastedDispatches: computes rate = touched-zero ok rows / all ok rows and f
   assert.equal(findings[0].metric, 'wasted_dispatch');
   assert.equal(findings[0].group, 'm-waste');
   assert.equal(findings[0].value, 2 / 3);
+  assert.equal(findings[0].threshold, WASTED_DISPATCH_THRESHOLD);
+  assert.ok(2 / 3 > WASTED_DISPATCH_THRESHOLD);
   assert.equal(findings[0].flagged, true);
   assert.deepEqual(findings[0].evidence, { wastedCount: 2, okCount: 3 });
 });
@@ -172,6 +175,31 @@ test('wastedDispatches: rate exactly 0 produces an unflagged finding', () => {
   const findings = wastedDispatches(rows);
   assert.equal(findings.length, 1);
   assert.equal(findings[0].value, 0);
+  assert.equal(findings[0].flagged, false);
+});
+
+test('wastedDispatches: a low but non-zero rate stays below the threshold and is not flagged', () => {
+  // 1 no-op run in 10 ok runs = 0.1, under the 0.15 threshold. Under the old
+  // "rate > 0" rule this would have been flagged.
+  const rows = [row({ source: 'opencode', model: 'm-low', ok: true, ext: { touched: 0 } })];
+  for (let i = 0; i < 9; i++) {
+    rows.push(row({ source: 'opencode', model: 'm-low', ok: true, ext: { touched: 1 } }));
+  }
+  const findings = wastedDispatches(rows);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].value, 0.1);
+  assert.ok(0.1 < WASTED_DISPATCH_THRESHOLD);
+  assert.equal(findings[0].flagged, false);
+});
+
+test('wastedDispatches: a rate exactly at the threshold is not flagged (strictly-greater-than)', () => {
+  // 3 of 20 = 0.15 exactly.
+  const rows = [];
+  for (let i = 0; i < 3; i++) rows.push(row({ source: 'opencode', model: 'm-edge', ok: true, ext: { touched: 0 } }));
+  for (let i = 0; i < 17; i++) rows.push(row({ source: 'opencode', model: 'm-edge', ok: true, ext: { touched: 1 } }));
+  const findings = wastedDispatches(rows);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].value, WASTED_DISPATCH_THRESHOLD);
   assert.equal(findings[0].flagged, false);
 });
 

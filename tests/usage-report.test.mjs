@@ -54,8 +54,9 @@ test('summarize: cost splits per source, devices are counted distinctly, ts span
 // --- flaggedFindings ---------------------------------------------------
 
 test('flaggedFindings: returns only flagged findings, drawn from more than one detector', () => {
-  // wastedDispatches flags any opencode model with an ok/0-touched run.
-  // missingWarmServer flags a model whose attach rate is below 0.8.
+  // wastedDispatches flags a model whose no-op rate clears the threshold
+  // (here 1 of 2 = 0.5). missingWarmServer flags a model whose attach rate is
+  // below 0.8 (here 0).
   const rows = [
     { source: 'opencode', model: 'm1', ok: true, ext: { touched: 0, attached: false } },
     { source: 'opencode', model: 'm1', ok: true, ext: { touched: 3, attached: false } },

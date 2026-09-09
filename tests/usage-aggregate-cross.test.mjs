@@ -210,45 +210,47 @@ test('poorCacheReuse: empty input yields empty findings', () => {
 // --- underDelegation -------------------------------------------------------------
 
 test('underDelegation: flags a repo/day where claude spend dominates and matches the hand-computed gap', () => {
+  // Dollar amounts are scaled well past UNDER_DELEGATION_FLOOR_USD; the gap
+  // (a ratio) is what each of these tests actually exercises.
   const rows = [
-    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, cost_usd: 2 }),
-    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, cost_usd: 1 }),
-    row({ source: 'opencode', cost_usd: 0.5 }),
+    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, cost_usd: 20 }),
+    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, cost_usd: 10 }),
+    row({ source: 'opencode', cost_usd: 5 }),
   ];
   const findings = underDelegation(rows);
   assert.equal(findings.length, 1);
   assert.equal(findings[0].metric, 'under_delegation');
   assert.equal(findings[0].group, 'repo-a/2026-08-30');
   assert.equal(findings[0].threshold, UNDER_DELEGATION_THRESHOLD);
-  assert.ok(3 > UNDER_DELEGATION_FLOOR_USD);       // claude spend clearly exceeds the floor
-  assert.ok(3 / 3.5 > UNDER_DELEGATION_THRESHOLD); // hand-computed gap is clearly above
-  // hand-computed: claude 3 / (claude 3 + opencode 0.5)
-  assert.equal(findings[0].value, 3 / 3.5);
+  assert.ok(30 > UNDER_DELEGATION_FLOOR_USD);       // claude spend clearly exceeds the floor
+  assert.ok(30 / 35 > UNDER_DELEGATION_THRESHOLD);  // hand-computed gap is clearly above
+  // hand-computed: claude 30 / (claude 30 + opencode 5)
+  assert.equal(findings[0].value, 30 / 35);
   assert.equal(findings[0].flagged, true);
-  assert.deepEqual(findings[0].evidence, { claudeSpend: 3, opencodeSpend: 0.5 });
+  assert.deepEqual(findings[0].evidence, { claudeSpend: 30, opencodeSpend: 5 });
 });
 
 test('underDelegation: claude spend above the floor but outweighed by opencode spend is not flagged', () => {
   const rows = [
-    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, cost_usd: 1 }),
-    row({ source: 'opencode', cost_usd: 3 }),
+    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, cost_usd: 10 }),
+    row({ source: 'opencode', cost_usd: 30 }),
   ];
   const findings = underDelegation(rows);
   assert.equal(findings.length, 1);
   assert.equal(findings[0].group, 'repo-a/2026-08-30');
-  // hand-computed: claude 1 / (claude 1 + opencode 3)
-  assert.equal(findings[0].value, 1 / 4);
+  // hand-computed: claude 10 / (claude 10 + opencode 30)
+  assert.equal(findings[0].value, 10 / 40);
   assert.equal(findings[0].flagged, false);
 });
 
 test('underDelegation: a gap exactly at the threshold is not flagged', () => {
   const rows = [
-    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, cost_usd: 0.7 }),
-    row({ source: 'opencode', cost_usd: 0.3 }),
+    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, cost_usd: 7 }),
+    row({ source: 'opencode', cost_usd: 3 }),
   ];
   const findings = underDelegation(rows);
   assert.equal(findings.length, 1);
-  // hand-computed: claude 0.7 / (claude 0.7 + opencode 0.3) = 0.7/1
+  // hand-computed: claude 7 / (claude 7 + opencode 3) = 0.7
   assert.equal(findings[0].value, UNDER_DELEGATION_THRESHOLD);
   assert.equal(findings[0].flagged, false);
 });
@@ -286,16 +288,16 @@ test('underDelegation: two different days for the same repo are separate groups'
       ok: null,
       ext: { session_id: 's1' },
       ts: '2026-08-30T23:30:00Z',
-      cost_usd: 2,
+      cost_usd: 20,
     }),
     row({
       source: 'claude',
       ok: null,
       ext: { session_id: 's1' },
       ts: '2026-08-31T00:30:00Z',
-      cost_usd: 1.5,
+      cost_usd: 15,
     }),
-    row({ source: 'opencode', ts: '2026-08-31T00:30:00Z', cost_usd: 0.5 }),
+    row({ source: 'opencode', ts: '2026-08-31T00:30:00Z', cost_usd: 5 }),
   ];
   const findings = underDelegation(rows);
   assert.equal(findings.length, 2);
@@ -305,15 +307,15 @@ test('underDelegation: two different days for the same repo are separate groups'
   assert.ok(d30);
   assert.ok(d31);
   // each day's gap is computed from that day's spend only
-  assert.equal(d30.value, 2 / 2); // claude 2 / (claude 2 + opencode 0)
-  assert.equal(d31.value, 1.5 / 2); // claude 1.5 / (claude 1.5 + opencode 0.5)
+  assert.equal(d30.value, 20 / 20); // claude 20 / (claude 20 + opencode 0)
+  assert.equal(d31.value, 15 / 20); // claude 15 / (claude 15 + opencode 5)
 });
 
 test('underDelegation: two different repos on the same day are separate groups', () => {
   const rows = [
-    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, repo: 'repo-a', cost_usd: 2 }),
-    row({ source: 'claude', ok: null, ext: { session_id: 's2' }, repo: 'repo-b', cost_usd: 1 }),
-    row({ source: 'opencode', repo: 'repo-b', cost_usd: 0.5 }),
+    row({ source: 'claude', ok: null, ext: { session_id: 's1' }, repo: 'repo-a', cost_usd: 20 }),
+    row({ source: 'claude', ok: null, ext: { session_id: 's2' }, repo: 'repo-b', cost_usd: 10 }),
+    row({ source: 'opencode', repo: 'repo-b', cost_usd: 5 }),
   ];
   const findings = underDelegation(rows);
   assert.equal(findings.length, 2);
@@ -322,10 +324,10 @@ test('underDelegation: two different repos on the same day are separate groups',
   assert.ok(a);
   assert.ok(b);
   // each repo's gap is computed from that repo's spend only
-  assert.equal(a.value, 2 / 2); // repo-a: claude 2 / (claude 2 + opencode 0)
-  assert.equal(b.value, 1 / 1.5); // repo-b: claude 1 / (claude 1 + opencode 0.5)
+  assert.equal(a.value, 20 / 20); // repo-a: claude 20 / (claude 20 + opencode 0)
+  assert.equal(b.value, 10 / 15); // repo-b: claude 10 / (claude 10 + opencode 5)
   assert.equal(a.flagged, true);
-  assert.equal(b.flagged, false); // 1/1.5 falls below the threshold
+  assert.equal(b.flagged, false); // 10/15 = 0.67 falls below the threshold
 });
 
 test('underDelegation: empty input yields empty findings', () => {

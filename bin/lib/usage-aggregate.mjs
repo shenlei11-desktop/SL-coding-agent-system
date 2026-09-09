@@ -14,8 +14,9 @@ export const STEPS_PER_FILE_STDEV_THRESHOLD = 1.5;
 export const ATTACH_RATE_THRESHOLD = 0.8;
 export const WALL_S_ZSCORE_THRESHOLD = 2;
 export const CACHE_REUSE_THRESHOLD = 0.3;
+export const WASTED_DISPATCH_THRESHOLD = 0.15;
 export const UNDER_DELEGATION_THRESHOLD = 0.7;
-export const UNDER_DELEGATION_FLOOR_USD = 0.5;
+export const UNDER_DELEGATION_FLOOR_USD = 5;
 
 /**
  * Group unified rows by a composite '<source>/<model>' key so that the same
@@ -154,8 +155,9 @@ export function underSeededTasks(rows) {
 /**
  * Detect opencode models that produce ok runs which touch zero files. For each
  * model group, rate = count(ok && touched===0) / count(ok); a group with no ok
- * runs is skipped entirely. Returns one finding per model group, flagged
- * whenever rate > 0.
+ * runs is skipped entirely. Returns one finding per model group, flagged when
+ * rate exceeds WASTED_DISPATCH_THRESHOLD (a low but non-zero rate of no-op
+ * "successes" is normal — analysis-only tasks land there too).
  */
 export function wastedDispatches(rows) {
   const findings = [];
@@ -177,8 +179,8 @@ export function wastedDispatches(rows) {
       metric: 'wasted_dispatch',
       group: model,
       value: rate,
-      threshold: null,
-      flagged: rate > 0,
+      threshold: WASTED_DISPATCH_THRESHOLD,
+      flagged: rate > WASTED_DISPATCH_THRESHOLD,
       evidence: { wastedCount, okCount },
     });
   }
@@ -333,7 +335,9 @@ export function poorCacheReuse(rows) {
  * rather than being delegated to opencode. Groups rows by '<repo>/<day>'
  * using a string slice of the ISO timestamp. Sums claude and opencode spend
  * separately; groups with claudeSpend <= UNDER_DELEGATION_FLOOR_USD are
- * skipped entirely.
+ * skipped entirely (the orchestrator's own planning/verify spend always lands
+ * on the Claude side, so a repo/day with only a few dollars of it is noise, not
+ * a missed delegation).
  */
 export function underDelegation(rows) {
   const findings = [];
