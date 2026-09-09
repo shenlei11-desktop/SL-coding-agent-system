@@ -60,31 +60,74 @@
   .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .meta .dot { margin: 0 6px; opacity: 0.5; }
 
-  .kpis {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px; margin-bottom: 26px;
+  .filters {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px;
+    margin-bottom: 22px; font-size: 12px;
   }
-  .kpi {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 14px 16px;
+  .filters label { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
+  .filters select {
+    background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; font-size: 12px; min-width: 140px;
   }
+  .filters select:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; }
+  .filters .radios {
+    display: inline-flex; border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden;
+  }
+  .filters .radios button {
+    background: var(--surface); color: var(--ink-2); border: 0; border-left: 1px solid var(--border);
+    padding: 5px 11px; font-size: 12px; cursor: pointer;
+  }
+  .filters .radios button:first-child { border-left: 0; }
+  .filters .radios button[aria-checked="true"] { background: var(--ink); color: var(--surface); }
+  .filters .radios button:focus-visible { outline: 2px solid var(--claude); outline-offset: -2px; z-index: 1; position: relative; }
+  .filters .reset {
+    background: transparent; color: var(--claude); border: 0; padding: 0; font-size: 12px;
+    cursor: pointer; text-decoration: underline;
+  }
+  .filters .reset[hidden] { display: none; }
+  .filters .reset:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; }
+
+  .kpis { display: flex; flex-wrap: wrap; gap: 10px 0; margin-bottom: 26px; }
+  .kpi { padding: 0 18px; border-left: 1px solid var(--border); min-width: 110px; }
+  .kpi:first-child { border-left: 0; padding-left: 0; }
   .kpi .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-  .kpi .value { margin-top: 6px; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .kpi.hero { grid-column: span 2; }
-  .kpi.hero .value { font-size: 40px; line-height: 1.05; letter-spacing: -0.01em; }
-  .kpi .sub { margin-top: 2px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  @media (max-width: 520px) { .kpi.hero { grid-column: span 1; } }
+  .kpi .value { margin-top: 2px; font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .kpi.hero { flex: 1 1 auto; min-width: 180px; }
+  .kpi.hero .value { font-size: 32px; font-weight: 600; color: var(--ink); line-height: 1.05; letter-spacing: -0.01em; }
+  .kpi .sub { margin-top: 1px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  @media (max-width: 520px) { .kpi { padding: 0 12px; min-width: 90px; } }
 
   .legend { display: flex; gap: 18px; align-items: center; margin: 0 0 14px 2px; font-size: 12px; color: var(--ink-2); }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
   .sw-claude { background: var(--claude); }
   .sw-opencode { background: var(--opencode); }
 
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 18px 18px 20px; margin-bottom: 18px;
+  .section { border-top: 1px solid var(--border); padding: 18px 0 22px; }
+  .section h2 { margin: 0 0 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .section-body { overflow-x: auto; }
+
+  .error {
+    background: rgba(208, 59, 59, 0.08); color: var(--critical); border: 1px solid rgba(208, 59, 59, 0.25);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 18px; font-size: 13px;
   }
-  .card h2 { margin: 0 0 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+
+  /* skeleton */
+  .skeleton { opacity: 0.45; }
+  @media (prefers-reduced-motion: no-preference) {
+    .skeleton { animation: pulse 1.8s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.65; } }
+  }
+  .sk-stats { display: flex; flex-wrap: wrap; gap: 10px 0; margin-bottom: 26px; }
+  .sk-stat { padding: 0 18px; border-left: 1px solid var(--border); min-width: 110px; }
+  .sk-stat:first-child { border-left: 0; padding-left: 0; min-width: 180px; }
+  .sk-stat .line { height: 11px; background: var(--grid); border-radius: 3px; margin-bottom: 6px; }
+  .sk-stat .line.wide { width: 70%; }
+  .sk-bars { display: flex; flex-direction: column; gap: 9px; }
+  .sk-bar { display: grid; grid-template-columns: 190px 1fr 74px; align-items: center; gap: 12px; }
+  .sk-bar .name { height: 12px; background: var(--grid); border-radius: 3px; width: 80%; }
+  .sk-bar .track { height: 16px; background: var(--grid); border-radius: 4px; }
+  .sk-bar .amt { height: 12px; background: var(--grid); border-radius: 3px; width: 50%; justify-self: end; }
 
   /* horizontal bars */
   .hbars { display: flex; flex-direction: column; gap: 9px; }
@@ -112,20 +155,28 @@
   .axis span { flex: 1 1 0; min-width: 8px; font-size: 10px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; overflow: hidden; white-space: nowrap; }
 
   /* bottlenecks */
-  .bn-group { margin-bottom: 16px; }
-  .bn-group:last-child { margin-bottom: 0; }
-  .bn-metric { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-  .sev { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); }
-  .sev i { display: inline-block; width: 7px; height: 7px; border-radius: 999px; margin-right: 5px; vertical-align: 0; }
-  .sev-serious i { background: var(--serious); }
-  .sev-warning i { background: var(--warning); }
-  .sev-critical i { background: var(--critical); }
   table.bn { width: 100%; border-collapse: collapse; font-size: 12px; }
-  table.bn td { padding: 4px 8px 4px 0; border-top: 1px solid var(--grid); vertical-align: top; font-variant-numeric: tabular-nums; }
-  table.bn tr:first-child td { border-top: 0; }
+  table.bn th, table.bn td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  table.bn thead th { text-align: left; font-weight: 600; color: var(--ink-2); white-space: nowrap; position: sticky; top: 0; background: var(--plane); }
+  table.bn thead th.v { text-align: right; }
+  table.bn th button {
+    background: transparent; border: 0; padding: 0; margin: 0; color: inherit; font: inherit;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  }
+  table.bn th button:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; border-radius: 2px; }
+  table.bn th .caret { font-size: 9px; color: var(--muted); }
+  table.bn th[aria-sort="ascending"] .caret::after { content: '▲'; color: var(--ink); }
+  table.bn th[aria-sort="descending"] .caret::after { content: '▼'; color: var(--ink); }
+  table.bn tbody tr:last-child td { border-bottom: 0; }
+  table.bn td { font-variant-numeric: tabular-nums; }
   table.bn .g { color: var(--ink-2); }
   table.bn .v { text-align: right; white-space: nowrap; color: var(--ink); }
   table.bn .e { color: var(--muted); }
+  .sev { font-size: 11px; color: var(--ink); display: inline-flex; align-items: center; gap: 6px; }
+  .sev i { display: inline-block; width: 8px; height: 8px; border-radius: 999px; }
+  .sev-serious i { background: var(--serious); }
+  .sev-warning i { background: var(--warning); }
+  .sev-critical i { background: var(--critical); }
 
   .empty { color: var(--muted); font-size: 13px; padding: 40px 0; text-align: center; }
 
@@ -146,7 +197,18 @@
     <h1>usage dashboard</h1>
     <div class="meta" id="meta">loading…</div>
   </header>
-  <div id="root"><div class="empty">loading…</div></div>
+  <div class="filters" id="filters" aria-label="filters">
+    <label for="device">Device
+      <select id="device"></select>
+    </label>
+    <div class="radios" role="radiogroup" aria-label="time window" id="window">
+      <button type="button" role="radio" aria-checked="true" data-window="all">All</button>
+      <button type="button" role="radio" aria-checked="false" data-window="30d">30d</button>
+      <button type="button" role="radio" aria-checked="false" data-window="7d">7d</button>
+    </div>
+    <button type="button" class="reset" id="reset" hidden>Reset</button>
+  </div>
+  <div id="root"></div>
 </div>
 <div id="tip"></div>
 
@@ -164,7 +226,18 @@ function compact(n) {
   return String(n);
 }
 
+let device = '';
+let timeWindow = 'all';
+let lastPayload = null;
+let bnSort = { key: 'severity', dir: 'desc' };
+
+const deviceSelect = $('#device');
+const windowGroup = $('#window');
+const resetBtn = $('#reset');
+const metaEl = $('#meta');
+const root = $('#root');
 const tip = $('#tip');
+
 function bindTip(node, html) {
   node.addEventListener('mouseenter', () => { tip.innerHTML = html; tip.style.opacity = '1'; });
   node.addEventListener('mousemove', e => {
@@ -176,6 +249,10 @@ function bindTip(node, html) {
     tip.style.left = x + 'px'; tip.style.top = y + 'px';
   });
   node.addEventListener('mouseleave', () => { tip.style.opacity = '0'; });
+}
+
+function segmentTip(name, source, value) {
+  return `<b>${name}</b><br><span class="k">${source}</span> ${usd(value)}`;
 }
 
 function hbars(rows, limit) {
@@ -191,22 +268,18 @@ function hbars(rows, limit) {
     const single = (r.claude === 0) || (r.opencode === 0);
     if (r.claude > 0) {
       const s = el('div', 'seg seg-claude' + (single ? ' only' : ''));
-      s.style.flexBasis = cw + '%'; track.appendChild(s);
+      s.style.flexBasis = cw + '%';
+      bindTip(s, segmentTip(r.name, 'claude', r.claude));
+      track.appendChild(s);
     }
     if (r.opencode > 0) {
       const s = el('div', 'seg seg-opencode' + (single ? ' only' : ''));
-      s.style.flexBasis = ow + '%'; track.appendChild(s);
+      s.style.flexBasis = ow + '%';
+      bindTip(s, segmentTip(r.name, 'opencode', r.opencode));
+      track.appendChild(s);
     }
     row.appendChild(track);
     row.appendChild(el('div', 'amt', usd(r.total)));
-    const passRate = r.runs ? Math.round((r.okRuns / r.runs) * 100) + '%' : '—';
-    bindTip(row,
-      `<b>${r.name}</b><br>` +
-      `<span class="k">claude</span> ${usd(r.claude)} &nbsp; <span class="k">opencode</span> ${usd(r.opencode)}<br>` +
-      `<span class="k">runs</span> ${r.runs} &nbsp; <span class="k">opencode pass</span> ${passRate}` +
-      (r.tokensIn || r.cacheRead
-        ? `<br><span class="k">tok in/out</span> ${compact(r.tokensIn)}/${compact(r.tokensOut)} &nbsp; <span class="k">cache rd</span> ${compact(r.cacheRead)}`
-        : ''));
     wrap.appendChild(row);
   }
   return wrap;
@@ -220,9 +293,16 @@ function dayCols(days) {
     const c = el('div', 'col');
     const ch = (d.claude / max) * 100;
     const oh = (d.opencode / max) * 100;
-    if (d.opencode > 0) { const p = el('div', 'p p-opencode'); p.style.height = oh + '%'; c.appendChild(p); }
-    if (d.claude > 0) { const p = el('div', 'p p-claude'); p.style.height = ch + '%'; c.appendChild(p); }
-    bindTip(c, `<b>${d.day}</b><br><span class="k">claude</span> ${usd(d.claude)} &nbsp; <span class="k">opencode</span> ${usd(d.opencode)}<br><span class="k">total</span> ${usd(d.total)}`);
+    if (d.opencode > 0) {
+      const p = el('div', 'p p-opencode'); p.style.height = oh + '%';
+      bindTip(p, `<b>${d.day}</b><br><span class="k">opencode</span> ${usd(d.opencode)}`);
+      c.appendChild(p);
+    }
+    if (d.claude > 0) {
+      const p = el('div', 'p p-claude'); p.style.height = ch + '%';
+      bindTip(p, `<b>${d.day}</b><br><span class="k">claude</span> ${usd(d.claude)}`);
+      c.appendChild(p);
+    }
     cols.appendChild(c);
   }
   box.appendChild(cols);
@@ -244,6 +324,7 @@ const SEVERITY = {
   poor_cache_reuse: 'serious',
   missing_warm_server: 'warning',
 };
+const SEVERITY_RANK = { critical: 3, serious: 2, warning: 1 };
 const METRIC_LABEL = {
   under_delegation: 'under-delegation',
   wasted_dispatch: 'wasted dispatch',
@@ -253,33 +334,82 @@ const METRIC_LABEL = {
   missing_warm_server: 'missing warm server',
 };
 
+function severityBadge(sev) {
+  const badge = el('span', 'sev sev-' + sev);
+  badge.appendChild(el('i'));
+  badge.appendChild(document.createTextNode(sev));
+  return badge;
+}
+
+function sortBottlenecks(list) {
+  const { key, dir } = bnSort;
+  const mul = dir === 'asc' ? 1 : -1;
+  return [...list].sort((a, b) => {
+    let cmp = 0;
+    if (key === 'severity') {
+      const ra = SEVERITY_RANK[SEVERITY[a.metric] || 'warning'] || 0;
+      const rb = SEVERITY_RANK[SEVERITY[b.metric] || 'warning'] || 0;
+      cmp = ra - rb;
+      if (cmp === 0) cmp = String(METRIC_LABEL[a.metric] || a.metric).localeCompare(String(METRIC_LABEL[b.metric] || b.metric));
+    } else if (key === 'group') {
+      cmp = String(a.group || '').localeCompare(String(b.group || ''));
+    } else if (key === 'value') {
+      cmp = (Number(a.value) || 0) - (Number(b.value) || 0);
+    }
+    return cmp * mul;
+  });
+}
+
 function bottlenecks(list) {
   const wrap = el('div');
   if (!list.length) { wrap.appendChild(el('div', 'empty', 'nothing flagged')); return wrap; }
-  const groups = new Map();
-  for (const f of list) { if (!groups.has(f.metric)) groups.set(f.metric, []); groups.get(f.metric).push(f); }
-  for (const [metric, items] of groups) {
-    const g = el('div', 'bn-group');
-    const h = el('div', 'bn-metric');
-    h.appendChild(el('span', null, (METRIC_LABEL[metric] || metric) + ' · ' + items.length));
-    const sev = SEVERITY[metric] || 'warning';
-    const badge = el('span', 'sev sev-' + sev);
-    badge.appendChild(el('i'));
-    badge.appendChild(document.createTextNode(sev));
-    h.appendChild(badge);
-    g.appendChild(h);
-    const t = el('table', 'bn');
-    for (const f of items) {
-      const tr = el('tr');
-      tr.appendChild(el('td', 'g', f.group));
-      const v = el('td', 'v', Number(f.value).toFixed(3) + (f.threshold == null ? '' : ' / ' + Number(f.threshold).toFixed(2)));
-      tr.appendChild(v);
-      tr.appendChild(el('td', 'e', shortEvidence(f.evidence)));
-      t.appendChild(tr);
+  const t = el('table', 'bn');
+  const thead = el('thead');
+  const htr = el('tr');
+  const headers = [
+    { key: 'severity', cls: '', label: 'Metric' },
+    { key: 'group', cls: '', label: 'Group' },
+    { key: 'value', cls: 'v', label: 'Value' },
+    { key: null, cls: 'e', label: 'Evidence' },
+  ];
+  for (const h of headers) {
+    const th = el('th', h.cls);
+    if (h.key) {
+      const btn = el('button');
+      btn.setAttribute('type', 'button');
+      btn.textContent = h.label;
+      const caret = el('span', 'caret');
+      caret.setAttribute('aria-hidden', 'true');
+      btn.appendChild(caret);
+      th.setAttribute('aria-sort', bnSort.key === h.key ? (bnSort.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+      btn.addEventListener('click', () => {
+        if (bnSort.key === h.key) bnSort.dir = bnSort.dir === 'asc' ? 'desc' : 'asc';
+        else { bnSort.key = h.key; bnSort.dir = 'desc'; }
+        if (lastPayload) render(lastPayload);
+      });
+      th.appendChild(btn);
+    } else {
+      th.textContent = h.label;
     }
-    g.appendChild(t);
-    wrap.appendChild(g);
+    htr.appendChild(th);
   }
+  thead.appendChild(htr);
+  t.appendChild(thead);
+  const tbody = el('tbody');
+  for (const f of sortBottlenecks(list)) {
+    const tr = el('tr');
+    const metricTd = el('td', 'g');
+    metricTd.appendChild(document.createTextNode((METRIC_LABEL[f.metric] || f.metric)));
+    metricTd.appendChild(el('br'));
+    metricTd.appendChild(severityBadge(SEVERITY[f.metric] || 'warning'));
+    tr.appendChild(metricTd);
+    tr.appendChild(el('td', 'g', f.group));
+    tr.appendChild(el('td', 'v', Number(f.value).toFixed(3) + (f.threshold == null ? '' : ' / ' + Number(f.threshold).toFixed(2))));
+    tr.appendChild(el('td', 'e', shortEvidence(f.evidence)));
+    tbody.appendChild(tr);
+  }
+  t.appendChild(tbody);
+  wrap.appendChild(t);
   return wrap;
 }
 function shortEvidence(e) {
@@ -292,14 +422,52 @@ function shortEvidence(e) {
   return JSON.stringify(e);
 }
 
-function card(title, node) {
-  const c = el('div', 'card');
+function section(title, node) {
+  const c = el('div', 'section');
   c.appendChild(el('h2', null, title));
-  c.appendChild(node);
+  const body = el('div', 'section-body');
+  body.appendChild(node);
+  c.appendChild(body);
   return c;
 }
 
+function updateFilters(payload) {
+  const devices = payload.devices || [];
+  const currentOptions = Array.from(deviceSelect.options).map(o => o.value);
+  const needed = ['', ...devices];
+  if (needed.join('\n') !== currentOptions.join('\n')) {
+    deviceSelect.innerHTML = '';
+    deviceSelect.appendChild(el('option', null, 'All devices')).value = '';
+    for (const id of devices) {
+      const opt = el('option', null, id);
+      opt.value = id;
+      deviceSelect.appendChild(opt);
+    }
+  }
+  deviceSelect.value = device;
+  for (const btn of windowGroup.querySelectorAll('button[data-window]')) {
+    btn.setAttribute('aria-checked', String(btn.dataset.window === timeWindow));
+  }
+  resetBtn.hidden = !(device || timeWindow !== 'all');
+}
+
+function emptyMessage() {
+  const parts = [];
+  if (device) parts.push(`device ${device}`);
+  if (timeWindow === '7d') parts.push('in the last 7d');
+  else if (timeWindow === '30d') parts.push('in the last 30d');
+  let msg = 'No usage';
+  if (parts.length) {
+    msg += ' for ' + parts.join(' ') + '. Widen the window or pick another device.';
+  } else {
+    msg += '. Run npm run usage:snapshot on each device, then commit usage/.';
+  }
+  return msg;
+}
+
 function render(d) {
+  lastPayload = d;
+  updateFilters(d);
   const s = d.summary;
   const oc = s.bySource.opencode || 0;
   const cl = s.bySource.claude || 0;
@@ -309,12 +477,11 @@ function render(d) {
   meta.push('updated ' + new Date(d.generatedAt).toLocaleTimeString());
   if (s.firstTs) meta.push(s.firstTs.slice(0, 10) + ' → ' + s.lastTs.slice(0, 10));
   meta.push(s.deviceCount + (s.deviceCount === 1 ? ' device' : ' devices'));
-  $('#meta').textContent = meta.join('  ·  ');
+  metaEl.textContent = meta.join('  ·  ');
 
-  const root = $('#root');
   root.innerHTML = '';
   if (!s.totalRows) {
-    root.appendChild(el('div', 'empty', 'no usage rows yet — run  npm run usage:snapshot  on each device, then commit usage/'));
+    root.appendChild(el('div', 'empty', emptyMessage()));
     return;
   }
 
@@ -337,24 +504,96 @@ function render(d) {
   legend.innerHTML = '<span><i class="sw-claude"></i>Claude Code</span><span><i class="sw-opencode"></i>opencode</span>';
   root.appendChild(legend);
 
-  root.appendChild(card('spend by repository', hbars(d.byRepo, 12)));
-  root.appendChild(card('spend by model', hbars(d.byModel, 12)));
-  root.appendChild(card('spend by day', dayCols(d.byDay)));
-  root.appendChild(card('bottlenecks', bottlenecks(d.bottlenecks)));
+  root.appendChild(section('spend by repository', hbars(d.byRepo, 12)));
+  root.appendChild(section('spend by model', hbars(d.byModel, 12)));
+  root.appendChild(section('spend by day', dayCols(d.byDay)));
+  root.appendChild(section('bottlenecks', bottlenecks(d.bottlenecks)));
 }
 
-async function poll() {
+function skeleton() {
+  const frag = document.createDocumentFragment();
+  const stats = el('div', 'sk-stats skeleton');
+  for (let i = 0; i < 5; i++) {
+    const st = el('div', 'sk-stat');
+    st.appendChild(el('div', 'line'));
+    st.appendChild(el('div', 'line wide'));
+    stats.appendChild(st);
+  }
+  frag.appendChild(stats);
+  for (let i = 0; i < 4; i++) {
+    const sec = el('div', 'section skeleton');
+    sec.appendChild(el('h2', null, '\u00A0'));
+    const body = el('div', 'section-body');
+    const bars = el('div', 'sk-bars');
+    for (let j = 0; j < 5; j++) {
+      const b = el('div', 'sk-bar');
+      b.appendChild(el('div', 'name'));
+      b.appendChild(el('div', 'track'));
+      b.appendChild(el('div', 'amt'));
+      bars.appendChild(b);
+    }
+    body.appendChild(bars);
+    sec.appendChild(body);
+    frag.appendChild(sec);
+  }
+  return frag;
+}
+root.appendChild(skeleton());
+
+function currentQuery() {
+  const params = new URLSearchParams();
+  if (device) params.set('device', device);
+  if (timeWindow !== 'all') params.set('window', timeWindow);
+  return params.toString();
+}
+
+function applyFilter() {
+  poll(currentQuery());
+}
+
+deviceSelect.addEventListener('change', () => {
+  device = deviceSelect.value;
+  applyFilter();
+});
+
+for (const btn of windowGroup.querySelectorAll('button[data-window]')) {
+  btn.addEventListener('click', () => {
+    timeWindow = btn.dataset.window;
+    applyFilter();
+  });
+}
+
+resetBtn.addEventListener('click', () => {
+  device = '';
+  timeWindow = 'all';
+  applyFilter();
+});
+
+function showErrorBanner() {
+  if (!$('.error')) {
+    const b = el('div', 'error', 'Cannot reach the server, retrying...');
+    root.insertBefore(b, root.firstChild);
+  }
+}
+
+async function poll(queryString) {
+  const url = '/api/data' + (queryString ? '?' + queryString : '');
   try {
-    const r = await fetch('/api/data', { cache: 'no-store' });
+    const r = await fetch(url, { cache: 'no-store' });
     const d = await r.json();
-    if (d.error) { $('#meta').textContent = 'error: ' + d.error; return; }
+    if (d.error) {
+      metaEl.textContent = 'error: ' + d.error;
+      showErrorBanner();
+      return;
+    }
     render(d);
   } catch (e) {
-    $('#meta').textContent = 'offline — retrying…';
+    metaEl.textContent = 'offline, retrying…';
+    showErrorBanner();
   }
 }
 poll();
-setInterval(poll, 15000);
+setInterval(() => poll(currentQuery()), 15000);
 </script>
 </body>
 </html>
