@@ -31,11 +31,21 @@ is more common in general. When asked to mirror an existing module, mirror it li
 adjacent code, no touching lockfiles, dependency manifests, or notebook metadata unless
 the task names them.
 
-**Frontend work** avoids the current generative-design defaults: cream-and-serif with a
-terracotta accent, near-black with one acid accent colour, decorative numbered section
-markers where the content is not genuinely a sequence. Spend boldness on one element and
-keep the rest restrained. Watch for CSS specificity collisions between type-based and
-element-based selectors fighting over spacing.
+**Frontend work.** Classify the surface first — marketing/portfolio, product app, or
+tool/dashboard — and apply the matching discipline. The `frontend` skill carries the full
+version; `templates/frontend.md` is the delegate-facing condensed form (`--template
+frontend`). Non-negotiables on any surface: one theme, one accent colour, one
+corner-radius system, audited across the whole page; WCAG AA contrast on every text,
+control, and focus ring; `prefers-color-scheme` dark mode; `prefers-reduced-motion`
+honoured; empty / loading / error states, not just the happy path; real content, never
+CSS art or `<div>` fake screenshots; no em-dashes in visible copy. Avoid the tired
+defaults: cream-and-serif with a terracotta accent, near-black with one acid accent,
+`Inter` as the default sans, AI-purple glow, three identical feature cards, an eyebrow
+above every heading, decorative numbered markers on non-sequential content. Spend boldness
+on one element, keep the rest restrained. Watch for CSS specificity collisions between
+type-based and element-based selectors fighting over spacing. Match the target repo's
+existing stack — do not introduce a framework or build step a project does not already
+have.
 
 **Repository layout.** `src/`, `tests/`, `docs/`, `scripts/`, `config/`,
 `.claude/skills/`, `.opencode/`.

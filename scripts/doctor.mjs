@@ -76,7 +76,7 @@ if (!existsSync(claudeMd)) {
 }
 
 // 4. Skills.
-for (const skill of ['delegate', 'classify', 'verify']) {
+for (const skill of ['delegate', 'classify', 'verify', 'frontend']) {
   if (existsSync(path.join(HOME, '.claude', 'skills', skill, 'SKILL.md'))) ok(`skill ${skill} installed`);
   else warn(`skill ${skill} not installed`);
 }

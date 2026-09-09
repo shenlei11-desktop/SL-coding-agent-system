@@ -47,9 +47,9 @@ this repo.
 node scripts/install.mjs
 ```
 Writes `~/.config/opencode/opencode.jsonc` (the tier/role agents) and `~/.claude/`
-(the orchestrator's `CLAUDE.md` and the `classify`/`delegate`/`verify` skills),
-backing up anything it replaces to `~/.agent-system/backups/`. Add `--dry-run` first
-if you want to see what it would touch before committing to it.
+(the orchestrator's `CLAUDE.md` and the `classify`/`delegate`/`verify`/`frontend`
+skills), backing up anything it replaces to `~/.agent-system/backups/`. Add `--dry-run`
+first if you want to see what it would touch before committing to it.
 
 **4. Verify.**
 ```bash
