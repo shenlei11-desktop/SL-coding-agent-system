@@ -22,6 +22,20 @@ Two things live outside this repo and are **not** meant to sync between devices:
 Don't try to sync `~/.agent-system/` between devices. Everything that should transfer
 lives in this repo instead.
 
+## The usage dashboard IS cross-device — through the repo
+
+The one exception to "state stays local" is the usage snapshot. `npm run usage` and
+`npm run usage:serve` rebuild `usage/<device-id>.jsonl` (device id = hostname, or
+`AGENT_DEVICE_ID`) from this machine's ledger + Claude Code transcripts, and read
+*every* `usage/*.jsonl` in the repo. So the cross-device view is just: run the tool on
+each machine, commit `usage/`, pull elsewhere.
+
+That file is committed data, not code — it rewrites whenever there's new local activity,
+so an active work session leaves it dirty. Commit it when you checkpoint; there's no need
+to commit every refresh, and `git checkout usage/` to drop an uninteresting one is fine.
+`git` will show merge conflicts only if two devices write the *same* device-id file,
+which shouldn't happen.
+
 ## Setup steps
 
 **1. Get the repo onto the new device.**
